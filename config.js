@@ -1,4 +1,12 @@
-/*
+const firebaseConfig = {
+  apiKey: "AIzaSyBZwnNe4ldYF8tbRcWO3DqSFtF8FLZj9dM",
+  authDomain: "taproll-a3a76.firebaseapp.com",
+  projectId: "taproll-a3a76",
+  storageBucket: "taproll-a3a76.firebasestorage.app",
+  messagingSenderId: "766058017579",
+  appId: "1:766058017579:web:fb0e0cc0c338c6e21a4b6e",
+  measurementId: "G-5XNELFQLC7"
+};/*
   TapRoll cloud sign-in settings.
 
   While this file has no settings, accounts are saved on each device.
