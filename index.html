@@ -7,6 +7,8 @@
 <meta name="theme-color" content="#121A3A" media="(prefers-color-scheme: dark)">
 <meta name="description" content="TapRoll: NFC attendance for every period.">
 <title>TapRoll</title>
+<link rel="privacy-policy" href="privacy.html">
+<link rel="terms-of-service" href="terms.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:wght@400..700&display=swap">
@@ -801,9 +803,30 @@ body.on-auth::before { background: var(--panel); }
 .demo-btn > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .demo-btn b { font-size: 14.5px; }
 .demo-btn small { font-size: 12.5px; color: var(--muted); }
-.auth-foot { width: min(100%, 410px); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 12.5px; color: var(--muted); }
+.auth-foot { width: min(100%, 410px); display: flex; flex-direction: column; gap: 12px; font-size: 12.5px; color: var(--muted); }
+.af-sync { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .auth-foot .ic { width: 15px; height: 15px; }
 .auth-foot .linkbtn { font-size: 12.5px; }
+.af-legal, .set-legal { display: flex; flex-wrap: wrap; gap: 4px 18px; border-top: 1px solid var(--line); }
+.af-legal { padding-top: 12px; }
+.af-legal a, .set-legal a { color: var(--muted); text-decoration: none; }
+.af-legal a:hover, .set-legal a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.af-terms { margin: 0; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--muted); text-wrap: balance; }
+.af-terms a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 2px; }
+.af-terms a:hover { text-decoration-color: currentColor; }
+.set-legal { margin-top: 18px; padding-top: 14px; font-size: 13px; }
+
+/* Shown only when JavaScript is off */
+.nojs {
+  max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding-block: 64px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.nojs-brand { margin: 0; display: flex; align-items: center; gap: 10px; font-family: var(--display); font-stretch: 118%; font-weight: 800; font-size: 20px; }
+.nojs h1 { margin: 0; font-family: var(--display); font-stretch: 120%; font-weight: 800; font-size: clamp(38px, 7vw, 56px); line-height: 1; letter-spacing: -.02em; text-wrap: balance; }
+.nojs p { margin: 0; max-width: 60ch; color: var(--ink-2); font-size: 16px; }
+.nojs-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .spin { width: 16px; height: 16px; flex: none; display: inline-block; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -872,6 +895,7 @@ body.on-auth::before { background: var(--panel); }
 <script src="config.js" onload="window.__taprollCfg.loaded=true" onerror="window.__taprollCfg.missing=true"></script>
 </head>
 <body>
+<noscript><div class="nojs"><div class="nojs-brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8l3.4 3.4 6-7.2"/><path d="M15.8 8.4a5 5 0 0 1 0 7.2"/><path d="M18.7 5.9a8.6 8.6 0 0 1 0 12.2"/></svg></span>TapRoll</div><h1>Take roll in one tap.</h1><p>TapRoll is NFC attendance for teachers. Students tap their tag on the way in, and TapRoll marks them present or tardy for the right period.</p><p><b>TapRoll needs JavaScript.</b> Turn it on in your browser’s settings, then reload this page.</p><p class="nojs-links"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a></p></div></noscript>
 <div class="authroot" id="auth" hidden></div>
 <div class="app" id="app" hidden>
   <aside class="rail" id="rail" aria-label="Schedule"></aside>
@@ -1331,6 +1355,28 @@ body.on-auth::before { background: var(--panel); }
         }
         this.loaded.days = true; dataChanged();
       }, onErr));
+    },
+    // Firestore keeps a workspace until its documents are deleted. Start fresh and replacing classes switch to a
+    // new workspace, then call this so the old students and attendance are erased rather than left out of sight.
+    purgeWs(ws) {
+      if (this.mode !== 'fs' || !ws || ws === this.ws) return Promise.resolve();
+      const fs = this.fs, base = `${this.root}/ws/${ws}`;
+      this.pendingWrites++;
+      setSyncState();
+      return Promise.resolve()
+        .then(() => fs.collection(`${base}/days`).get())
+        .then((qs) => {
+          const refs = [fs.doc(`${base}/meta/periods`), fs.doc(`${base}/meta/roster`), ...qs.docs.map((d) => d.ref)];
+          let chain = Promise.resolve();
+          // A batch holds at most 500 changes.
+          for (let i = 0; i < refs.length; i += 400) {
+            const part = refs.slice(i, i + 400);
+            chain = chain.then(() => { const b = fs.batch(); part.forEach((r) => b.delete(r)); return b.commit(); });
+          }
+          return chain;
+        })
+        .catch((err) => console.warn('TapRoll: old classes were not deleted', ws, err))
+        .finally(() => { this.pendingWrites = Math.max(0, this.pendingWrites - 1); setSyncState(); });
     },
     subFailed(e) {
       console.warn('TapRoll: live sync stopped', e);
@@ -2692,7 +2738,8 @@ body.on-auth::before { background: var(--panel); }
         + `<button class="btn" data-act="load-demo">${ic('spark')} ${demo ? 'Reset example data' : 'Load example data'}</button>`
         + `${demo ? '' : `<button class="btn danger" data-act="start-fresh">${ic('trash')} Start fresh</button>`}</div>` : ''}`
       + `${Session.kind === 'device' ? `<p class="m-text small">Want to sign in from any device? <button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button></p>` : ''}`
-      + `</section>`, { label: 'Settings' });
+      + `</section>`
+      + `<nav class="set-legal" aria-label="Policies">${legalLinks(true)}</nav>`, { label: 'Settings' });
     $('#settings-form').addEventListener('submit', (e) => {
       e.preventDefault();
       prefs.sound = $('#set-sound').checked;
@@ -2789,6 +2836,7 @@ body.on-auth::before { background: var(--panel); }
     };
     NFC.stopScan(true);
     if (Store.mode === 'fs') {
+      const old = Store.ws;
       const ws = (sample ? 'demo-' : 'ws-') + rid(6);
       Store.switchWs(ws, true);
       S.periods = state.periods; S.students = state.students; S.days = state.days;
@@ -2797,6 +2845,7 @@ body.on-auth::before { background: var(--panel); }
       Store.write(`${base}/meta/roster`, { students: state.students });
       for (const [date, per] of Object.entries(state.days)) Store.write(`${base}/days/${date}`, { date, periods: per });
       setSettings({ ...keep, ws, sample });
+      Store.purgeWs(old);
     } else {
       S = { settings: { ...S.settings, ...keep, sample }, periods: state.periods, students: state.students, days: state.days };
       Store.saveLocalSoon();
@@ -2813,7 +2862,7 @@ body.on-auth::before { background: var(--panel); }
   }
   function startFresh() {
     NFC.stopScan(true);
-    if (Store.mode === 'fs') { const ws = 'ws-' + rid(6); Store.switchWs(ws, true); setSettings({ ws, sample: false }); }
+    if (Store.mode === 'fs') { const old = Store.ws, ws = 'ws-' + rid(6); Store.switchWs(ws, true); setSettings({ ws, sample: false }); Store.purgeWs(old); }
     else { S = emptyState({ ...S.settings, sample: false }); Store.saveLocalSoon(); }
     resetView();
     dataChanged();
@@ -3334,6 +3383,7 @@ body.on-auth::before { background: var(--panel); }
       + pwField('Password', 'new-password', '<small class="hint">At least 8 characters</small>')
       + `<button type="submit" class="btn primary block" id="au-submit">Create account</button>`
       + googleBlock()
+      + `<p class="af-terms">By creating an account, you agree to the ${legalLink('terms', 'Terms of Service', true)} and ${legalLink('privacy', 'Privacy Policy', true)}.</p>`
       + `<p class="af-switch">Already have an account? <button type="button" class="linkbtn" data-act="auth-view" data-v="signin">Sign in</button></p></form>`;
   }
   function resetForm() {
@@ -3363,9 +3413,18 @@ body.on-auth::before { background: var(--panel); }
     return signInForm();
   }
   const demoButton = () => `<button type="button" class="demo-btn" data-act="auth-demo">${ic('spark')}<span><b>Explore an example classroom</b><small>No account needed. The students are made up.</small></span>${ic('chevron')}</button>`;
+  // The privacy policy and terms are their own pages next to index.html (build.py writes them).
+  // On the hosted site, links from inside the app open a new tab so a half-filled form or an open class isn't lost.
+  function legalLink(page, label, inApp) {
+    const tab = inApp && BUILD_TARGET === 'site' ? ' target="_blank" rel="noopener"' : '';
+    return `<a href="${page}.html"${tab}>${label}</a>`;
+  }
+  const legalLinks = (inApp) => legalLink('privacy', 'Privacy Policy', inApp) + legalLink('terms', 'Terms of Service', inApp);
   function authFooter() {
-    if (Cloud.cfg) return `<footer class="auth-foot">${ic('cloud')}<span>Sign in on any device to see the same classes.</span></footer>`;
-    return `<footer class="auth-foot">${ic('device')}<span>Accounts are saved in this browser on this device.</span><button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button></footer>`;
+    const note = Cloud.cfg
+      ? `${ic('cloud')}<span>Sign in on any device to see the same classes.</span>`
+      : `${ic('device')}<span>Accounts are saved in this browser on this device.</span><button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button>`;
+    return `<footer class="auth-foot"><p class="af-sync">${note}</p><nav class="af-legal" aria-label="Policies">${legalLinks(false)}</nav></footer>`;
   }
   function authPanelInner() {
     const showDemo = authUI.view === 'signin' || authUI.view === 'signup';

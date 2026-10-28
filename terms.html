@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131821" media="(prefers-color-scheme: dark)">
+<title>TapRoll Terms of Service</title>
+<meta name="description" content="The terms for using TapRoll, NFC attendance for teachers.">
+<link rel="canonical" href="https://taprolleducation.com/terms.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:wght@400..700&display=swap">
+<style>
+/* TapRoll policy pages: a slim brand bar, one reading column about 68 characters wide, and a footer that links the
+   pages together. Colors and type match the app. */
+:root {
+  --bg: #F1F3F6;
+  --surface: #FFFFFF;
+  --line: #DAE0E8;
+  --line-2: #C3CBD7;
+  --ink: #0F172A;
+  --ink-2: #334155;
+  --muted: #5F6B82;
+  --accent: #2343CE;
+  --on-accent: #FFFFFF;
+  --accent-soft: #E3E8FD;
+  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B0E14; --surface: #131821; --line: #242C39; --line-2: #36404F;
+    --ink: #E8ECF3; --ink-2: #C2CAD7; --muted: #8E99AD;
+    --accent: #93A6FF; --on-accent: #0A0F1F; --accent-soft: #1D2647;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B0E14; --surface: #131821; --line: #242C39; --line-2: #36404F;
+  --ink: #E8ECF3; --ink-2: #C2CAD7; --muted: #8E99AD;
+  --accent: #93A6FF; --on-accent: #0A0F1F; --accent-soft: #1D2647;
+  color-scheme: dark;
+}
+/* Printed copies always use dark ink on white paper. */
+@media print {
+  :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+    --bg: #FFFFFF; --surface: #FFFFFF; --line: #C9CED6; --line-2: #9AA3B0;
+    --ink: #000000; --ink-2: #1F2937; --muted: #4B5563;
+    --accent: #1A34A6; --on-accent: #FFFFFF; --accent-soft: #EEF1FD;
+    color-scheme: light;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code { font-family: var(--mono); font-size: .88em; }
+
+/* Bands span the width; their inner wrappers carry the side gutter. */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+.foot { border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.top-in, .doc, .foot-in {
+  max-width: 760px; margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.top-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-family: var(--display); font-stretch: 118%; font-weight: 800; font-size: 19px; letter-spacing: -.01em; }
+.logo { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
+.logo svg { width: 20px; height: 20px; }
+.open { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); color: var(--ink); background: var(--surface); font-weight: 600; font-size: 14px; text-decoration: none; white-space: nowrap; }
+.open:hover { border-color: var(--accent); color: var(--accent); }
+
+.doc { padding-block: 44px 64px; }
+h1 { margin: 0 0 6px; font-family: var(--display); font-stretch: 114%; font-weight: 800; font-size: clamp(34px, 6vw, 48px); line-height: 1.04; letter-spacing: -.02em; text-wrap: balance; }
+.date { margin: 0 0 22px; font: 500 13px/1.4 var(--mono); color: var(--muted); }
+.lead { margin: 0 0 26px; font-size: 17.5px; color: var(--ink-2); max-width: 64ch; }
+h2 { margin: 44px 0 10px; font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 23px; line-height: 1.2; letter-spacing: -.01em; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { margin: 24px 0 6px; font-size: 16.5px; line-height: 1.35; text-wrap: balance; }
+p { margin: 0 0 12px; max-width: 68ch; color: var(--ink-2); }
+ul { margin: 0 0 12px; padding-left: 22px; max-width: 66ch; color: var(--ink-2); }
+li { margin: 5px 0; padding-left: 2px; }
+strong { color: var(--ink); }
+
+.summary { margin: 0 0 8px; padding: 18px 20px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); max-width: 68ch; }
+.summary h2 { margin: 0 0 6px; font: 700 12px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.summary ul { margin: 0; }
+
+/* What TapRoll keeps for each student, with a real-looking example of each item. */
+.facts { margin: 6px 0 16px; max-width: 68ch; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.facts > div { display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 4px 18px; padding: 14px 18px; }
+.facts > div + div { border-top: 1px solid var(--line); }
+.facts dt { font-weight: 700; color: var(--ink); }
+.facts dd { margin: 0; min-width: 0; color: var(--ink-2); }
+.eg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.eg code { padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+
+.tagcard { margin: 6px 0 14px; max-width: 68ch; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; border: 1px dashed var(--line-2); border-radius: 14px; background: var(--surface); }
+.tagcard figcaption { font: 600 12px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.tagcard code { font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
+
+.contact { margin-top: 10px; padding: 14px 16px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); }
+.contact a { font-weight: 600; overflow-wrap: anywhere; }
+
+.foot-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding-block: 20px 28px; font-size: 14px; color: var(--muted); }
+.foot-in a { color: var(--muted); }
+.foot-in a:hover { color: var(--ink); }
+.foot-in a[aria-current="page"] { color: var(--ink); font-weight: 600; text-decoration: none; }
+
+@media (max-width: 560px) {
+  .doc { padding-block: 32px 48px; }
+  .facts > div { grid-template-columns: minmax(0, 1fr); }
+  .lead { font-size: 16.5px; }
+}
+@media print {
+  .open { display: none; }
+  a { color: var(--ink); }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="brand" href="./"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8l3.4 3.4 6-7.2"/><path d="M15.8 8.4a5 5 0 0 1 0 7.2"/><path d="M18.7 5.9a8.6 8.6 0 0 1 0 12.2"/></svg></span>TapRoll</a><a class="open" href="./">Open TapRoll</a></div></header>
+<main class="doc">
+<h1>Terms of Service</h1>
+<p class="date">Effective October 27, 2026</p>
+<p class="lead">These terms are an agreement between you and TapRoll about using TapRoll at taprolleducation.com. By creating an account or using TapRoll, you agree to them. Please read them along with our <a href="privacy.html">Privacy Policy</a>, which explains how we handle information.</p>
+
+<section class="summary" aria-labelledby="short">
+  <h2 id="short">The short version</h2>
+  <ul>
+    <li>TapRoll is a tool for teachers and school staff to take attendance.</li>
+    <li>Get your school’s permission before adding student information, and keep your account secure.</li>
+    <li>You and your school own your class and student information. We use it only to run TapRoll.</li>
+    <li>TapRoll is free right now and provided as is. It doesn’t replace your school’s official attendance system or emergency procedures.</li>
+  </ul>
+</section>
+
+<h2 id="using-taproll">Using TapRoll</h2>
+<p>You must be at least 18 to create a TapRoll account. TapRoll is meant for teachers, school staff and other adults who take attendance for students. Students shouldn’t create accounts.</p>
+<p>If you use TapRoll for a school, you confirm that the school allows it. Use TapRoll only as these terms, your school’s policies and the law allow.</p>
+
+<h2 id="your-account">Your account</h2>
+<p>Give accurate information when you sign up, keep your password private and don’t share your account. You’re responsible for what happens in your account. If you think someone else has used it, reset your password and email us right away.</p>
+
+<h2 id="student-information">Student information</h2>
+<p>Before you add student information, make sure your school allows it, and follow your school’s policies and the laws that apply, such as FERPA in the United States. Add only what TapRoll needs: names, class periods and tags. Don’t add sensitive information such as student ID numbers, health details or notes about behavior.</p>
+
+<h2 id="your-content">Your content</h2>
+<p>The classes, students and attendance records you add are your content. You and your school keep all rights to it. You give TapRoll permission to store, copy and process your content only as needed to run TapRoll for you, as described in the <a href="privacy.html">Privacy Policy</a>. You can download or delete your content at any time.</p>
+
+<h2 id="tags-and-readers">NFC tags and readers</h2>
+<p>TapRoll works with NFC tags, phones and USB readers made by other companies. We don’t make or sell them, and we aren’t responsible for how they work.</p>
+<p>Like any NFC tag, a TapRoll tag can be copied, shared or lost. A tap shows that a tag was there, not who was holding it, so treat attendance from tags as a helpful record and correct it when needed.</p>
+
+<h2 id="not-a-safety-system">Not an official record or safety system</h2>
+<p>TapRoll can make mistakes, for example when a tag is shared or misread, a device is offline or a bell schedule is wrong. It doesn’t replace your school’s official attendance system, emergency procedures or other safety practices. Check your records and follow your school’s procedures.</p>
+
+<h2 id="acceptable-use">Acceptable use</h2>
+<p>When you use TapRoll, don’t:</p>
+<ul>
+  <li>use it to track or monitor people for any purpose other than taking attendance</li>
+  <li>add information about people without permission to do so</li>
+  <li>try to get into another person’s account or information, or get around TapRoll’s security</li>
+  <li>disrupt or overload TapRoll, or use automated tools in ways that harm the service</li>
+  <li>use it to break the law or to harm anyone</li>
+  <li>sell, rent or resell access to TapRoll</li>
+</ul>
+
+<h2 id="cost">Cost</h2>
+<p>TapRoll is free to use right now. If we add paid plans, we’ll tell you in advance, and you won’t be charged unless you choose a paid plan.</p>
+
+<h2 id="changes-to-taproll">Changes to TapRoll</h2>
+<p>We’re improving TapRoll all the time, so features may change or be removed. If we stop offering TapRoll, we’ll give you reasonable notice so you can download your content first.</p>
+
+<h2 id="ending-your-use">Ending your use</h2>
+<p>You can stop using TapRoll at any time and ask us to delete your account. We may suspend or end your access if you break these terms, or when it’s needed to protect TapRoll, students or others. When we can, we’ll tell you why and give you a chance to download your content.</p>
+
+<h2 id="other-services">Other services</h2>
+<p>TapRoll uses services from other companies, such as Google sign-in. Their own terms also apply when you use them.</p>
+
+<h2 id="disclaimer">Disclaimer</h2>
+<p><strong>TapRoll is provided “as is” and “as available.” To the extent the law allows, we make no warranties of any kind, express or implied, including warranties of merchantability, fitness for a particular purpose and non-infringement. We don’t promise that TapRoll will always be available, error free or secure, or that it will work with every device, tag or reader.</strong></p>
+
+<h2 id="limitation-of-liability">Limitation of liability</h2>
+<p><strong>To the extent the law allows, TapRoll won’t be liable for any indirect, incidental, special, consequential or punitive damages, or for any loss of data, profits or revenue, that comes from your use of TapRoll. Our total liability for any claim about TapRoll is limited to the greater of $100 or the amount you paid us in the 12 months before the claim.</strong> Some places don’t allow these limits, so they may not apply to you.</p>
+
+<h2 id="changes">Changes to these terms</h2>
+<p>We may update these terms. We’ll post the new version here with a new date. If a change is significant, we’ll let you know before it takes effect, for example by email or with a notice in TapRoll. If you keep using TapRoll after a change takes effect, you agree to the updated terms.</p>
+
+<h2 id="contact">Contact us</h2>
+<p class="contact">Questions about these terms: <a href="mailto:support@taprolleducation.com">support@taprolleducation.com</a></p>
+</main>
+<footer class="foot"><nav class="foot-in" aria-label="TapRoll policies"><span>© 2026 TapRoll</span><a href="privacy.html">Privacy Policy</a><a href="terms.html" aria-current="page">Terms of Service</a></nav></footer>
+</body>
+</html>
