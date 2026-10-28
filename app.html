@@ -492,6 +492,9 @@ code {
 .opstatus { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: var(--r); font-size: 14px; border: 1px solid var(--line); background: var(--surface); }
 .opstatus.ok { border-color: var(--p); background: var(--p-soft); }
 .opstatus.err { border-color: var(--a); background: var(--a-soft); }
+.opstatus.warn { align-items: flex-start; border-color: var(--t); background: var(--t-soft); }
+.opstatus.warn > .ic { color: var(--t); margin-top: 1px; }
+.op-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .opstatus.wait .pulse { margin: 0 4px; }
 .opstatus p { margin: 0; flex: 1; min-width: 0; }
 .hist { display: flex; flex-direction: column; gap: 8px; }
@@ -1591,7 +1594,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const NFC = {
     supported: typeof window.NDEFReader === 'function',
     framed: (() => { try { return window.self !== window.top; } catch (e) { return true; } })(),
-    scanCtl: null, busy: null, lastKey: '', lastAt: 0,
+    scanCtl: null, busy: null, resumeTimer: null, lastKey: '', lastAt: 0,
     status() {
       if (!this.supported) return { ok: false, code: 'unsupported', title: 'NFC isn’t available in this browser', detail: 'Websites can read and write NFC tags in Chrome on Android phones. On an iPhone or a computer, use a USB reader or mark students by hand.' };
       if (this.framed) return { ok: false, code: 'framed', title: 'NFC is off in this preview', detail: 'Chrome only allows NFC on a page opened directly in its own tab. Open your hosted TapRoll site in Chrome on an Android phone.' };
@@ -1620,6 +1623,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       }
     },
     stopScan(quiet) {
+      clearTimeout(this.resumeTimer); this.resumeTimer = null;
       if (this.scanCtl) { try { this.scanCtl.abort(); } catch (e) { /* ignore */ } }
       this.scanCtl = null;
       if (ui.scanning) { ui.scanning = false; if (!ui.kiosk) releaseWakeLock(); if (!quiet) scheduleRender(); }
@@ -1644,11 +1648,15 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     },
     // Waits for one tag. With records, writes them to it. Resolves { serial, before } where
     // before is what the tag held (null if it couldn't be read).
-    session(records, timeout = 30000) {
+    // beforeWrite(serial, before) runs after the tag is read and before anything is written. If it returns false,
+    // nothing is written and the result has held: true.
+    session(records, timeout = 30000, beforeWrite = null) {
       const st = this.status();
       if (!st.ok) return Promise.reject(Object.assign(new Error(st.detail), { name: 'Unavailable', title: st.title }));
       if (this.busy) this.busy.cancel();
-      const resume = !!this.scanCtl;
+      // A scan that was about to resume after the last session counts as running, so it resumes after this one instead.
+      const resume = !!this.scanCtl || !!this.resumeTimer;
+      clearTimeout(this.resumeTimer); this.resumeTimer = null;
       this.stopScan(true);
       const ctl = new AbortController();
       const reader = new window.NDEFReader();
@@ -1660,7 +1668,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
           clearTimeout(timer);
           try { ctl.abort(); } catch (e) { /* ignore */ }
           this.busy = null;
-          if (resume) setTimeout(() => this.startScan(), 600); else scheduleRender();
+          if (resume) this.resumeTimer = setTimeout(() => { this.resumeTimer = null; this.startScan(); }, 600); else scheduleRender();
           if (ok) resolve(val); else reject(val);
         };
         const timer = setTimeout(() => finish(false, Object.assign(new Error('No tag found. Try again and hold the tag to the back of the phone.'), { name: 'TimeoutError' })), timeout);
@@ -1669,6 +1677,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
           if (started || settled) return;
           started = true;
           if (!records) { finish(true, { serial, before }); return; }
+          if (beforeWrite && !beforeWrite(serial, before)) { finish(true, { serial, before, held: true }); return; }
           try { await reader.write({ records }, { signal: ctl.signal, overwrite: true }); finish(true, { serial, before }); }
           catch (err) { finish(false, err); }
         };
@@ -2490,19 +2499,55 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const el = $('#tag-op');
     if (!el) return;
     if (!kind) { el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="opstatus ${kind}">${kind === 'wait' ? '<span class="pulse"></span>' : ic(kind === 'ok' ? 'check' : 'alert')}<p>${esc(text)}</p>`
+    el.innerHTML = `<div class="opstatus ${kind}">${kind === 'wait' ? '<span class="pulse"></span>' : ic(kind === 'ok' ? 'check' : kind === 'info' ? 'info' : 'alert')}<p>${esc(text)}</p>`
       + `${cancelable ? '<button class="btn sm" data-act="cancel-op">Cancel</button>' : ''}</div>`;
   }
+  // Asks before a tag is taken from another student. Nothing changes unless the teacher picks the first button.
+  function opConfirm({ text, okLabel, keepLabel, keptText, onOk }) {
+    const el = $('#tag-op');
+    if (!el) return;
+    el.innerHTML = `<div class="opstatus warn" role="alert">${ic('alert')}<div class="op-body"><p>${esc(text)}</p>`
+      + `<div class="row"><button type="button" class="btn sm primary" id="op-ok">${esc(okLabel)}</button><button type="button" class="btn sm" id="op-keep">${esc(keepLabel)}</button></div></div></div>`;
+    $('#op-ok').addEventListener('click', onOk);
+    $('#op-keep').addEventListener('click', () => opStatus('info', keptText));
+  }
+  // Other students in your classes who have this tag now, matched by its TapRoll code or its reader ID.
+  function tagOwners(sid, token, code) {
+    return Object.values(S.students).filter((o) => o.id !== sid && ((token && o.token === token) || (code && uidIn(o.uids, code))));
+  }
+  const namesOf = (list) => list.map(fullName).join(' and ');
+  function takeWarning(owners, ifClause) {
+    const names = namesOf(owners);
+    const single = owners.length === 1;
+    const who = single ? (owners[0].first || names) : names;
+    return {
+      text: `This tag belongs to ${names}. ${ifClause}, ${who} will need ${single ? 'a new tag' : 'new tags'}.`,
+      keepLabel: single && owners[0].first ? `Keep it with ${owners[0].first}` : 'Cancel',
+      keptText: `Nothing changed. The tag still belongs to ${names}.`
+    };
+  }
 
-  // Writing a tag gives it a fresh code; whoever had that physical tag before loses it.
-  async function writeTag(sid) {
+  // Writing a tag gives it a fresh code; whoever had that physical tag before loses it, so TapRoll asks first.
+  // confirmed: the tag (serial and code) the teacher already agreed to take from another student.
+  async function writeTag(sid, confirmed) {
     const st = S.students[sid];
     if (!st || !editable()) return;
     primeAudio();
     const token = rid(12);
-    opStatus('wait', `Hold a blank or old tag to the back of the phone to write ${st.first || 'this student'}’s tag…`, true);
+    opStatus('wait', confirmed ? `Hold the same tag to the back of the phone again to write ${st.first || 'this student'}’s tag…` : `Hold a blank or old tag to the back of the phone to write ${st.first || 'this student'}’s tag…`, true);
+    const sameTag = (serial, before) => !!confirmed && (confirmed.serial ? confirmed.serial === serial : (!!confirmed.token && !!before && before.token === confirmed.token));
     try {
-      const res = await NFC.session(tagRecords(token));
+      const res = await NFC.session(tagRecords(token), 30000, (serial, before) => sameTag(serial, before) || !tagOwners(sid, before && before.token, serial).length);
+      if (res.held) {
+        const fresh = S.students[sid];
+        if (!fresh) return;
+        const owners = tagOwners(sid, res.before && res.before.token, res.serial);
+        if (!owners.length) { writeTag(sid); return; }   // the other student lost the tag meanwhile (another device)
+        const w = takeWarning(owners, `If you write a new code on it for ${fullName(fresh)}`);
+        beep('warn'); buzz('warn');
+        opConfirm({ ...w, okLabel: 'Write it anyway', onOk: () => writeTag(sid, { serial: res.serial, token: res.before && res.before.token }) });
+        return;
+      }
       const changes = [];
       let prevOwner = null;
       for (const other of Object.values(S.students)) {
@@ -2556,13 +2601,20 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         });
     }
   }
-  function applyLink(sid, found) {
+  function applyLink(sid, found, confirmed) {
     const fresh = S.students[sid];
     if (!fresh) return;
     const code = found.uid || found.serial || null;
     const token = found.token || null;
     if (!code && !token) { opStatus('err', 'TapRoll couldn’t read an ID from that tag. Write a new tag instead.'); return; }
     if ((!token || fresh.token === token) && (!code || uidIn(fresh.uids, code))) { opStatus('ok', `That tag is already linked to ${fullName(fresh)}.`); return; }
+    const owners = tagOwners(sid, token, code);
+    if (owners.length && !confirmed) {
+      const w = takeWarning(owners, `If you move it to ${fullName(fresh)}`);
+      beep('warn'); buzz('warn');
+      opConfirm({ ...w, okLabel: `Move tag to ${fresh.first || 'this student'}`, onOk: () => applyLink(sid, found, true) });
+      return;
+    }
     const changes = [];
     let prevOwner = null;
     for (const other of Object.values(S.students)) {
@@ -2577,7 +2629,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     changes.push({ ...fresh, token: token || fresh.token, uids: code && !uidIn(fresh.uids, code) ? [...fresh.uids, code] : fresh.uids, tagAt: Date.now() });
     upsertStudents(changes);
     refreshStudent();
-    opStatus('ok', `Linked this tag to ${fullName(fresh)}.${prevOwner ? ` It used to be ${fullName(prevOwner)}’s tag.` : ''}${token ? ' It keeps working in any other class that uses it.' : ''}`);
+    opStatus('ok', `Linked this tag to ${fullName(fresh)}.${prevOwner ? ` It used to be ${fullName(prevOwner)}’s tag, so ${prevOwner.first || 'they'} will need a new one.` : ''}${token ? ' It keeps working in any other class that uses it.' : ''}`);
     beep('present');
     scheduleRender();
   }
