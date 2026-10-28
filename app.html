@@ -585,6 +585,21 @@ code {
 .toast .tact.x { padding: 5px; border-color: transparent; opacity: .75; display: grid; place-items: center; }
 .toast .tact.x svg { width: 15px; height: 15px; }
 .check.fit { align-self: flex-start; }
+
+/* Period form: typed bell times, minutes fields with a unit, and a plain-language summary of the timing */
+.field .tinput { font-variant-numeric: tabular-nums; }
+.field > .ufield { position: relative; display: block; font: inherit; color: inherit; }
+.ufield input { padding-right: 46px !important; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.ufield input::-webkit-inner-spin-button, .ufield input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ufield > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); pointer-events: none; }
+.pf-sum { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); }
+
+/* Student drawer: a tardy that can be excused */
+.dsec.late h3 { color: var(--t); }
+.dsec.late.is-excused h3 { color: var(--p); }
+.excuse-form { display: flex; flex-direction: column; gap: 12px; }
+.reasons { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.reasons legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .dsec.first { border-top: 0; margin-top: 0; padding-top: 0; }
 .opstatus code { background: var(--surface); }
 
@@ -1165,13 +1180,47 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const METHOD = { nfc: 'NFC tag', usb: 'USB reader', manual: 'by hand', link: 'tag link', demo: 'simulated tap' };
   const METHOD_ICON = { nfc: 'nfc', usb: 'usb', manual: 'hand', link: 'link', demo: 'spark' };
   const DEFAULT_SETTINGS = { school: '', teacher: '', graceMin: 5, tagBase: '', sample: false, ws: '' };
+  // Each period has a passing time (check-in opens this many minutes before its bell) and a tardy grace (taps up to
+  // this many minutes after the bell still count as present). Periods saved before these existed use the defaults:
+  // the passing time below, and the grace from Settings (graceMin), which used to apply to every period.
+  const DEFAULT_PASS = 10;
+  const mins0to60 = (v) => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.round(n))) : null; };
+  const defaultGrace = () => { const g = mins0to60(S.settings.graceMin); return g == null ? 5 : g; };
+  const passOf = (p) => (p && p.pass != null ? p.pass : DEFAULT_PASS);
+  const graceOf = (p) => (p && p.grace != null ? p.grace : defaultGrace());
+  // An excused tardy is stored as present (so it counts as on time) with xt set and the reason in why.
+  const EXCUSES = ['Held by another teacher', 'Office pass', 'Late bus', 'Other'];
+  const markLabel = (mk) => (mk.xt ? 'Excused tardy' : STATUS[mk.s]);
+
+  // Bell times are typed, like 8:05, 805, 1:16 pm or 13:16. Without am/pm, 1 to 5 o'clock means afternoon and
+  // 6 to 11 means morning, which fits a school day. Returns minutes after midnight, or null.
+  function parseClock(text) {
+    let t = String(text || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!t) return null;
+    let half = null;
+    const suf = /(a|p)\.?m?\.?$/.exec(t);
+    if (suf) { half = suf[1]; t = t.slice(0, suf.index); }
+    let h, m;
+    let mm = /^(\d{1,2})[:.](\d{2})$/.exec(t);
+    if (mm) { h = +mm[1]; m = +mm[2]; }
+    else if ((mm = /^(\d{1,2})$/.exec(t))) { h = +mm[1]; m = 0; }
+    else if ((mm = /^(\d{1,2})(\d{2})$/.exec(t))) { h = +mm[1]; m = +mm[2]; }
+    else return null;
+    if (m > 59) return null;
+    if (half) {
+      if (h < 1 || h > 12) return null;
+      h = (h % 12) + (half === 'p' ? 12 : 0);
+    } else if (h > 23) return null;
+    else if (h >= 1 && h <= 5) h += 12;
+    return h * 60 + m;
+  }
 
   const emptyState = (settings) => ({ settings: { ...DEFAULT_SETTINGS, ...(settings || {}) }, periods: {}, students: {}, days: {} });
   let S = emptyState();
   const ui = {
     screen: 'boot', ready: false, view: 'overview', periodId: null, date: todayStr(),
     filter: 'all', search: '', scanning: false, kiosk: false, readOnly: false,
-    syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null
+    syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null, excuseFor: null
   };
   // Who is signed in. kind: 'device' (account saved in this browser), 'cloud' (Firebase account) or 'demo' (example classroom).
   const Session = { kind: null, user: null };
@@ -1183,7 +1232,15 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
 
   /* ============================== Normalizers ============================== */
   function normPeriod(p) {
-    return { id: String(p.id), num: Number(p.num) || 0, course: String(p.course || '').trim().slice(0, 60), room: String(p.room || '').trim().slice(0, 20), start: p.start || '', end: p.end || '' };
+    return {
+      id: String(p.id), num: Number(p.num) || 0, course: String(p.course || '').trim().slice(0, 60), room: String(p.room || '').trim().slice(0, 20),
+      start: p.start || '', end: p.end || '', pass: mins0to60(p.pass), grace: mins0to60(p.grace)
+    };
+  }
+  function normMark(mk) {
+    const out = { s: mk.s, t: Number(mk.t) || 0, m: String(mk.m || 'manual') };
+    if (mk.xt && mk.s === 'P') { out.xt = 1; if (mk.why) out.why = String(mk.why).slice(0, 90); }
+    return out;
   }
   function normStudent(s) {
     return {
@@ -1205,7 +1262,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     for (const [pid, marks] of Object.entries(periods)) {
       if (!isObj(marks)) continue;
       const m = {};
-      for (const [sid, mk] of Object.entries(marks)) if (isObj(mk) && STATUS[mk.s]) m[sid] = { s: mk.s, t: Number(mk.t) || 0, m: String(mk.m || 'manual') };
+      for (const [sid, mk] of Object.entries(marks)) if (isObj(mk) && STATUS[mk.s]) m[sid] = normMark(mk);
       if (Object.keys(m).length) out[pid] = m;
     }
     return out;
@@ -1444,8 +1501,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const day = S.days[date] || (S.days[date] = {});
     const per = day[pid] || (day[pid] = {});
     for (const { sid, mark } of entries) {
-      if (mark) per[sid] = mark; else delete per[sid];
-      patch[sid] = mark || null;
+      const mk = mark ? normMark(mark) : null;
+      if (mk) per[sid] = mk; else delete per[sid];
+      // Firestore merges into the stored mark field by field, so clear the excuse fields explicitly.
+      patch[sid] = mk ? { xt: null, why: null, ...mk } : null;
     }
     if (!Object.keys(per).length) delete day[pid];
     if (!Object.keys(day).length) delete S.days[date];
@@ -1511,7 +1570,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     for (const d of sessionsFor(pid).slice(0, 15).reverse()) {
       const mk = S.days[d][pid][st.id];
       const s = mk ? mk.s : 'U';
-      out[s]++; out.cells.push({ d, s });
+      out[s]++; out.cells.push({ d, s, xt: !!(mk && mk.xt) });
     }
     return out;
   }
@@ -1739,27 +1798,32 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   };
 
   /* ============================== Check-in logic ============================== */
+  // A tap up to the period's grace after the bell counts as present; later counts as tardy.
   function tapStatus(p) {
     if (prefs.tapAs === 'P' || prefs.tapAs === 'T') return prefs.tapAs;
     const s = toMin(p.start);
     if (s == null) return 'P';
-    return nowMin() > s + (Number(S.settings.graceMin) || 0) ? 'T' : 'P';
+    return nowMin() > s + graceOf(p) ? 'T' : 'P';
+  }
+  // The student's period by the bell schedule: one in session, or the next one whose passing time has started.
+  function scheduledPeriod(st) {
+    const now = nowMin();
+    const mine = st.periods.map((id) => S.periods[id]).filter(Boolean);
+    const live = mine.find((p) => phaseOf(p) === 'now');
+    if (live) return live;
+    return mine.filter((p) => { const s = toMin(p.start); return s != null && now < s && s - now <= passOf(p); })
+      .sort((a, b) => toMin(a.start) - toMin(b.start))[0] || null;
   }
   function resolveTarget(st) {
     const today = todayStr();
-    if (ui.view === 'period' && S.periods[ui.periodId]) {
-      if (ui.date !== today) return { reason: 'Switch to today to check students in.' };
-      return { pid: ui.periodId, date: today };
-    }
-    const now = nowMin();
-    if (st) {
-      const mine = st.periods.map((id) => S.periods[id]).filter(Boolean);
-      const live = mine.find((p) => phaseOf(p) === 'now');
-      if (live) return { pid: live.id, date: today };
-      const soon = mine.filter((p) => { const s = toMin(p.start); return s != null && s - now >= 0 && s - now <= 20; })
-        .sort((a, b) => toMin(a.start) - toMin(b.start))[0];
-      if (soon) return { pid: soon.id, date: today };
-    }
+    const open = ui.view === 'period' ? S.periods[ui.periodId] : null;
+    if (open && ui.date !== today) return { reason: 'Switch to today to check students in.' };
+    // The bell schedule decides first. So when period 1 ends at 8:00 and period 2's bell rings at 8:05, a tap at
+    // 8:02 counts for period 2, even if period 1 is still open on this screen.
+    const timed = st ? scheduledPeriod(st) : null;
+    if (timed) return { pid: timed.id, date: today };
+    // Outside the schedule, taps go to the period open on screen (for example, checking in early before class).
+    if (open) return { pid: open.id, date: today };
     const cur = currentPeriod();
     if (cur) return { pid: cur.id, date: today };
     return { reason: 'No period is in session. Open a period to check students in.' };
@@ -1810,8 +1874,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const ev = {
       kind: s === 'T' ? 'tardy' : 'present', text: fullName(st),
       sub: `${STATUS[s]} · ${periodLabel(p)} · ${fmtClock(t)}`, pid: p.id, sid: st.id,
-      actions: [{ label: 'Undo', run: () => { setMark(target.date, p.id, st.id, prev); scheduleRender(); } }]
+      actions: [{ key: 'undo', label: 'Undo', run: () => { setMark(target.date, p.id, st.id, prev); scheduleRender(); } }]
     };
+    // A late student often has a reason (another teacher kept them), so offer to excuse it right away.
+    if (s === 'T') ev.actions.push({ key: 'excuse', label: 'Excuse', run: () => openStudent(st.id, { excuse: { date: target.date, pid: p.id } }) });
     if (viaLink) { ui.view = 'period'; ui.periodId = p.id; ui.date = target.date; scheduleRender(); }
     report(ev);
   }
@@ -2173,7 +2239,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     if (s == null) return 'Add bell times to count late taps as tardy.';
     if (prefs.tapAs === 'P') return 'Every tap counts as present.';
     if (prefs.tapAs === 'T') return 'Every tap counts as tardy.';
-    return `Bell <b>${esc(fmtHMap(p.start))}</b> · tardy after <b>${esc(fmtHMap(minToHM(s + (Number(S.settings.graceMin) || 0))))}</b>`;
+    return `Check-in opens <b>${esc(fmtHMap(minToHM(Math.max(0, s - passOf(p)))))}</b> · bell <b>${esc(fmtHMap(p.start))}</b> · tardy after <b>${esc(fmtHMap(minToHM(s + graceOf(p))))}</b>`;
   }
 
   function viewPeriod(p) {
@@ -2207,14 +2273,14 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const recent = Object.entries(marks).filter(([sid, mk]) => S.students[sid] && (mk.s === 'P' || mk.s === 'T'))
         .sort((a, b) => b[1].t - a[1].t).slice(0, 5);
       const feed = recent.length
-        ? `<ol class="feed">${recent.map(([sid, mk]) => `<li><span class="dot ${mk.s === 'T' ? 'k-tardy' : 'k-present'}"></span><span class="fx"><b>${esc(fullName(S.students[sid]))}</b> · ${esc(STATUS[mk.s])}${mk.m !== 'manual' ? ` · ${esc(METHOD[mk.m] || mk.m)}` : ''}</span><time>${esc(fmtClock(mk.t))}</time></li>`).join('')}</ol>`
+        ? `<ol class="feed">${recent.map(([sid, mk]) => `<li><span class="dot ${mk.s === 'T' ? 'k-tardy' : 'k-present'}"></span><span class="fx"><b>${esc(fullName(S.students[sid]))}</b> · ${esc(markLabel(mk))}${mk.m !== 'manual' ? ` · ${esc(METHOD[mk.m] || mk.m)}` : ''}</span><time>${esc(fmtClock(mk.t))}</time></li>`).join('')}</ol>`
         : '<p class="feed-empty">Check-ins appear here as students tap in.</p>';
       scan = `<section class="card scanpanel ${ui.scanning ? 'is-live' : ''}" aria-label="Check-in">`
         + `<div class="scan-main"><div class="scan-row">${btn}`
         + `<button class="btn" data-act="kiosk">${ic('expand')} Kiosk</button>`
         + `<button class="btn ghost" data-act="simulate" ${editable() && roster.length ? '' : 'disabled'}>${ic('spark')} Simulate tap</button></div>`
         + `<div class="sources"><div class="src ${nfc.ok ? 'ok' : ''}">${ic('nfc')}<span>${nfcLine}</span></div>`
-        + `<div class="src ok">${ic('usb')}<span><b>USB reader:</b> ready. Scans go to ${esc(periodLabel(p))}.</span></div></div>`
+        + `<div class="src ok">${ic('usb')}<span><b>USB reader:</b> ready. Taps follow your bell schedule.</span></div></div>`
         + `<div class="scan-row"><span class="rule">Taps count as</span>${tapSeg()}</div><div class="rule">${tardyRule(p)}</div></div>`
         + `<div class="scan-side"><div class="sect-head"><h2 class="sect">Recent check-ins</h2></div>${feed}</div></section>`;
     } else {
@@ -2246,7 +2312,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function tile(st, mk) {
     const s = mk ? mk.s : null;
     const how = mk && METHOD_ICON[mk.m] ? `<span class="how" title="${esc(METHOD[mk.m] || mk.m)}" aria-label="${esc(METHOD[mk.m] || mk.m)}">${ic(METHOD_ICON[mk.m])}</span>` : '';
-    const meta = s ? `${STATUS[s]} · ${fmtClock(mk.t)}` : 'Not marked yet';
+    const meta = s ? `${markLabel(mk)} · ${fmtClock(mk.t)}` : 'Not marked yet';
     const noTag = st.token || st.uids.length ? '' : ' · <span class="notag">no tag</span>';
     const can = editable();
     return `<article class="stu ${s ? 's-' + STATUS_CLS[s] : 's-u'}" data-tile="${esc(st.id)}">`
@@ -2342,9 +2408,12 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const act = ev.actions && ev.kind === 'unknown' ? ev.actions[0] : null;
     openModal(`<div class="confirm-big"><span class="badge" style="background:${color}">${ic(TOAST_ICON[ev.kind] || 'info').replace('class="ic"', 'class="ic big"')}</span>`
       + `<h2>${esc(ev.text)}</h2><p>${esc(ev.sub || '')}</p></div><div class="m-foot">${act ? `<button class="btn" id="lr-act">${esc(act.label)}</button>` : ''}`
-      + `${ev.kind === 'present' || ev.kind === 'tardy' ? `<button class="btn" id="lr-undo">Undo</button>` : ''}<button class="btn primary" data-act="close-modal">Done</button></div>`, { label: 'Check-in' });
+      + `${ev.kind === 'present' || ev.kind === 'tardy' ? `<button class="btn" id="lr-undo">Undo</button>` : ''}`
+      + `${ev.kind === 'tardy' ? `<button class="btn" id="lr-excuse">Excuse tardy</button>` : ''}<button class="btn primary" data-act="close-modal">Done</button></div>`, { label: 'Check-in' });
+    const pick = (key) => (ev.actions || []).find((x) => x.key === key);
     const a = $('#lr-act'); if (a) a.addEventListener('click', () => { closeModal(); act.run(); });
-    const u = $('#lr-undo'); if (u) u.addEventListener('click', () => { closeModal(); ev.actions[0].run(); });
+    const u = $('#lr-undo'); if (u) u.addEventListener('click', () => { closeModal(); pick('undo').run(); });
+    const x = $('#lr-excuse'); if (x) x.addEventListener('click', () => { closeModal(); pick('excuse').run(); });
   }
 
   function openPeriodEditor(id) {
@@ -2355,31 +2424,69 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const last = list[list.length - 1];
     const ds = last && toMin(last.end) != null ? minToHM(Math.min(toMin(last.end) + 6, 22 * 60)) : '08:00';
     const de = minToHM(Math.min(toMin(ds) + 50, 23 * 60 + 59));
-    openModal(`${modalHead(p ? `Edit ${periodLabel(p)}` : 'Add a period', p ? '' : 'Bell times decide when a tap counts as tardy.')}`
+    // A new period starts with the timing of the one before it, so it only has to be set once.
+    const pass = p ? passOf(p) : (last ? passOf(last) : DEFAULT_PASS);
+    const grace = p ? graceOf(p) : (last ? graceOf(last) : defaultGrace());
+    const others = list.filter((x) => !p || x.id !== p.id).length;
+    const timeField = (id, label, hm) => `<label class="field"><span>${label}</span><input id="${id}" class="tinput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="10" placeholder="8:00 AM" value="${esc(fmtHMap(hm))}"></label>`;
+    const minField = (id, label, v, help) => `<label class="field"><span>${label}</span><span class="ufield"><input id="${id}" type="number" min="0" max="60" step="1" inputmode="numeric" value="${v}"><span aria-hidden="true">min</span></span><small>${help}</small></label>`;
+    openModal(`${modalHead(p ? `Edit ${periodLabel(p)}` : 'Add a period', p ? '' : 'Bell times decide which period a tap counts for and when it’s tardy.')}`
       + `<form id="period-form" class="m-body" novalidate>`
       + `<div class="grid2"><label class="field"><span>Period number</span><input id="pf-num" type="number" min="0" max="20" required value="${p ? p.num : nextNum}"></label>`
       + `<label class="field"><span>Room</span><input id="pf-room" maxlength="20" value="${esc(p ? p.room : '')}" placeholder="214"></label></div>`
       + `<label class="field"><span>Course</span><input id="pf-course" maxlength="60" required value="${esc(p ? p.course : '')}" placeholder="Biology"></label>`
-      + `<div class="grid2"><label class="field"><span>Bell rings</span><input id="pf-start" type="time" required value="${esc(p ? p.start : ds)}"></label>`
-      + `<label class="field"><span>Class ends</span><input id="pf-end" type="time" required value="${esc(p ? p.end : de)}"></label></div>`
-      + `<p class="m-text small" id="pf-err" hidden></p>`
+      + `<div class="grid2">${timeField('pf-start', 'Bell rings', p ? p.start : ds)}${timeField('pf-end', 'Class ends', p ? p.end : de)}</div>`
+      + `<div class="grid2">${minField('pf-pass', 'Passing time', pass, 'Taps this early count for this period.')}${minField('pf-grace', 'Tardy grace', grace, 'Taps this late still count as present.')}</div>`
+      + `<p class="pf-sum" id="pf-sum" aria-live="polite"></p>`
+      + `${others ? `<label class="check fit"><input type="checkbox" id="pf-all"> Use this passing time and grace for all ${others + 1} periods</label>` : ''}`
+      + `<p class="m-text small err-text" id="pf-err" role="alert" hidden></p>`
       + `<div class="m-foot">${p ? `<button type="button" class="btn danger spacer" data-act="delete-period" data-id="${esc(p.id)}">${ic('trash')} Delete</button>` : ''}`
       + `<button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">${p ? 'Save changes' : 'Add period'}</button></div></form>`, { label: 'Period', focus: p ? null : '#pf-course' });
-    $('#period-form').addEventListener('submit', (e) => {
+    const form = $('#period-form');
+    const read = () => ({
+      start: parseClock($('#pf-start').value), end: parseClock($('#pf-end').value),
+      pass: mins0to60($('#pf-pass').value), grace: mins0to60($('#pf-grace').value)
+    });
+    const at = (m) => fmtHMap(minToHM(((m % 1440) + 1440) % 1440));
+    const summarize = () => {
+      const v = read();
+      const sum = $('#pf-sum');
+      if (v.start == null) { sum.textContent = 'Type the bell time, like 8:05.'; return; }
+      const parts = [];
+      if (v.pass != null) parts.push(`Check-in opens at ${at(v.start - v.pass)}.`);
+      if (v.grace != null) parts.push(v.grace ? `Taps until ${at(v.start + v.grace)} count as present. After that, they’re tardy.` : `Taps after ${at(v.start)} count as tardy.`);
+      sum.textContent = parts.join(' ');
+    };
+    form.addEventListener('input', () => { $('#pf-err').hidden = true; summarize(); });
+    // Show what a typed time was read as (805 becomes 8:05 AM), or flag it if it can't be read.
+    form.addEventListener('focusout', (e) => {
+      const el = e.target;
+      if (!el.classList || !el.classList.contains('tinput')) return;
+      const m = parseClock(el.value);
+      if (m != null) { el.value = at(m); el.removeAttribute('aria-invalid'); } else if (el.value.trim()) el.setAttribute('aria-invalid', 'true');
+      summarize();
+    });
+    form.addEventListener('focusin', (e) => { if (e.target.classList && e.target.classList.contains('tinput')) e.target.select(); });
+    summarize();
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
       const num = Number($('#pf-num').value);
       const course = $('#pf-course').value.trim();
-      const start = $('#pf-start').value, end = $('#pf-end').value;
+      const v = read();
       const err = $('#pf-err');
       let msg = '';
       if (!Number.isFinite(num) || $('#pf-num').value === '') msg = 'Enter a period number.';
       else if (!course) msg = 'Enter a course name.';
-      else if (toMin(start) == null || toMin(end) == null) msg = 'Enter both bell times.';
-      else if (toMin(end) <= toMin(start)) msg = 'Class has to end after the bell rings.';
+      else if (v.start == null || v.end == null) msg = 'Enter both bell times, like 8:05 or 1:16 PM.';
+      else if (v.end <= v.start) msg = 'Class has to end after the bell rings.';
+      else if (v.pass == null) msg = 'Enter a passing time from 0 to 60 minutes.';
+      else if (v.grace == null) msg = 'Enter a tardy grace from 0 to 60 minutes.';
       if (msg) { err.textContent = msg; err.hidden = false; return; }
-      const saved = upsertPeriod({ id: p ? p.id : 'p' + rid(8), num, course, room: $('#pf-room').value, start, end });
+      const saved = upsertPeriod({ id: p ? p.id : 'p' + rid(8), num, course, room: $('#pf-room').value, start: minToHM(v.start), end: minToHM(v.end), pass: v.pass, grace: v.grace });
+      const all = $('#pf-all') && $('#pf-all').checked;
+      if (all) for (const o of periodList()) if (o.id !== saved.id && (o.pass !== v.pass || o.grace !== v.grace)) upsertPeriod({ ...o, pass: v.pass, grace: v.grace });
       closeModal();
-      toast({ kind: 'ok', text: p ? 'Period saved' : `${periodLabel(saved)} added`, sub: saved.course });
+      toast({ kind: 'ok', text: p ? 'Period saved' : `${periodLabel(saved)} added`, sub: all ? 'Passing time and grace now match for every period.' : saved.course });
       if (!p) openPeriod(saved.id); else scheduleRender();
     });
   }
@@ -2428,11 +2535,69 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   }
 
   /* ----- Student drawer ----- */
-  function openStudent(sid) {
+  // opts.excuse = { date, pid }: open with the form for excusing that tardy (from a check-in's Excuse button).
+  function openStudent(sid, opts = {}) {
     if (!S.students[sid]) return;
     ui.openStudent = sid;
-    openModal(studentHtml(sid), { cls: 'drawer', label: 'Student', onClose: () => { ui.openStudent = null; } });
+    ui.excuseFor = opts.excuse || null;
+    openModal(studentHtml(sid), { cls: 'drawer', label: 'Student', onClose: () => { ui.openStudent = null; ui.excuseFor = null; } });
     bindStudentForm(sid);
+  }
+  // Tardies the drawer offers to excuse: the student's periods on the day being viewed (today from the overview),
+  // plus the check-in an Excuse button pointed at.
+  function lateMarks(st) {
+    const date = ui.view === 'period' ? ui.date : todayStr();
+    const out = [];
+    const seen = new Set();
+    const add = (d, pid) => {
+      if (seen.has(d + '|' + pid) || !S.periods[pid] || !st.periods.includes(pid)) return;
+      seen.add(d + '|' + pid);
+      const mk = marksOf(d, pid)[st.id];
+      if (mk && (mk.s === 'T' || mk.xt)) out.push({ date: d, p: S.periods[pid], mk });
+    };
+    if (ui.excuseFor) add(ui.excuseFor.date, ui.excuseFor.pid);
+    st.periods.map((id) => S.periods[id]).filter(Boolean).sort((a, b) => a.num - b.num).forEach((p) => add(date, p.id));
+    return out;
+  }
+  function lateSection(st, { date, p, mk }, first) {
+    const bell = toMin(p.start);
+    const at = new Date(mk.t);
+    const late = bell == null ? 0 : at.getHours() * 60 + at.getMinutes() - bell;
+    const when = `${periodLabel(p)}${date !== todayStr() ? `, ${fmtDateShort(date)}` : ''}`;
+    const checked = `Checked in at ${fmtClock(mk.t)}${late > 0 ? `, ${late} minute${late === 1 ? '' : 's'} after the bell` : ''}.`;
+    const ids = `data-sid="${esc(st.id)}" data-date="${esc(date)}" data-pid="${esc(p.id)}"`;
+    const can = editable();
+    let body;
+    if (mk.xt) {
+      body = `<p class="m-text">${esc(checked)} Excused${mk.why ? `: ${esc(mk.why)}` : ''}.</p>`
+        + (can ? `<div class="row"><button type="button" class="btn sm" data-act="unexcuse" ${ids}>Mark tardy again</button></div>` : '');
+    } else if (can && ui.excuseFor && ui.excuseFor.date === date && ui.excuseFor.pid === p.id) {
+      body = `<p class="m-text">${esc(checked)} An excused tardy counts as on time.</p>`
+        + `<form class="excuse-form" ${ids}><fieldset class="reasons"><legend>Reason</legend><div class="checks">`
+        + EXCUSES.map((r, i) => `<label class="check"><input type="radio" name="ex-why" value="${esc(r)}" ${i === 0 ? 'checked' : ''}> ${esc(r)}</label>`).join('')
+        + `</div></fieldset><label class="field"><span>Note <em>optional</em></span><input id="ex-note" maxlength="60" autocomplete="off" placeholder="Like the teacher’s name"></label>`
+        + `<div class="row"><button type="submit" class="btn sm primary">Excuse tardy</button><button type="button" class="btn sm" data-act="excuse-cancel">Cancel</button></div></form>`;
+    } else {
+      body = `<p class="m-text">${esc(checked)}</p>` + (can ? `<div class="row"><button type="button" class="btn sm" data-act="excuse-open" ${ids}>${ic('check')} Excuse tardy</button></div>` : '');
+    }
+    return `<section class="dsec${first ? ' first' : ''} late${mk.xt ? ' is-excused' : ''}"><h3>${mk.xt ? 'Excused tardy' : 'Tardy'} · ${esc(when)}</h3>${body}</section>`;
+  }
+  function excuseTardy(sid, date, pid, why) {
+    const mk = marksOf(date, pid)[sid];
+    const st = S.students[sid];
+    if (!mk || mk.s !== 'T' || !st || !editable()) return;
+    setMark(date, pid, sid, { ...mk, s: 'P', xt: 1, why });
+    ui.excuseFor = null;
+    refreshStudent();
+    scheduleRender();
+    toast({ kind: 'ok', text: 'Tardy excused', sub: `${fullName(st)} · ${periodLabel(S.periods[pid])}`, actions: [{ label: 'Undo', run: () => { setMark(date, pid, sid, mk); refreshStudent(); scheduleRender(); } }] });
+  }
+  function unexcuseTardy(sid, date, pid) {
+    const mk = marksOf(date, pid)[sid];
+    if (!mk || !mk.xt || !editable()) return;
+    setMark(date, pid, sid, { s: 'T', t: mk.t, m: mk.m });
+    refreshStudent();
+    scheduleRender();
   }
   function refreshStudent() {
     if (!ui.openStudent || !modal.open) return;
@@ -2455,12 +2620,14 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const h = studentHistory(st, p.id);
       const marked = h.P + h.T + h.A + h.E;
       const rate = marked ? `${pct(h.P + h.T, marked)}%` : '—';
-      return `<div class="hrow"><span class="pnum">P${esc(p.num)}</span><div class="cells">${h.cells.length ? h.cells.map((c) => `<span class="cell ${c.s}" title="${esc(fmtDay(c.d))}: ${esc(STATUS[c.s] || 'Not marked')}">${c.s === 'U' ? '·' : c.s}</span>`).join('') : '<span class="m-text small">No sessions yet</span>'}</div><span class="hrate">${rate}</span></div>`;
+      return `<div class="hrow"><span class="pnum">P${esc(p.num)}</span><div class="cells">${h.cells.length ? h.cells.map((c) => `<span class="cell ${c.s}" title="${esc(fmtDay(c.d))}: ${esc(c.xt ? 'Excused tardy' : (STATUS[c.s] || 'Not marked'))}">${c.s === 'U' ? '·' : c.s}</span>`).join('') : '<span class="m-text small">No sessions yet</span>'}</div><span class="hrate">${rate}</span></div>`;
     }).join('');
+    const late = lateMarks(st);
     return `<div class="m-head dr-head"><span class="av" style="--h:${hueOf(st.id)}">${esc(initials(st))}</span>`
       + `<div class="dr-title"><h2>${esc(fullName(st))}</h2><p>${esc(periods.map((p) => `P${p.num} ${p.course}`).join(' · ') || 'Not in any period')}</p></div>`
       + `<button class="btn ghost icon" data-act="close-modal" aria-label="Close">${ic('x')}</button></div>`
-      + `<section class="dsec first"><h3>NFC tag</h3>`
+      + late.map((e, i) => lateSection(st, e, i === 0)).join('')
+      + `<section class="dsec${late.length ? '' : ' first'}"><h3>NFC tag</h3>`
       + `<div class="tagcard ${hasTag ? 'linked' : ''}">${ic('tag')}<div><b>${esc(tagLine)}</b><span>${esc(tagDetail || 'Write a new tag with an Android phone, or link a tag the student already has.')}</span></div></div>`
       + `${can ? `<div class="row"><button class="btn primary" data-act="write-tag" data-id="${esc(st.id)}" ${nfc.ok ? '' : 'disabled'}>${ic('nfc')} ${hasTag ? 'Write a new tag' : 'Write tag'}</button>`
         + `<button class="btn" data-act="link-tag" data-id="${esc(st.id)}">${ic('link')} Link existing tag</button>`
@@ -2478,6 +2645,16 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         + `<div class="m-foot"><button type="button" class="btn danger spacer" data-act="delete-student" data-id="${esc(st.id)}">${ic('trash')} Remove student</button><button type="submit" class="btn primary">Save</button></div></form></section>` : ''}`;
   }
   function bindStudentForm(sid) {
+    const ex = document.querySelector('#modal-root .excuse-form');
+    if (ex) {
+      ex.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const picked = ex.querySelector('input[name="ex-why"]:checked');
+        const reason = picked ? picked.value : 'Other';
+        const note = ($('#ex-note').value || '').trim();
+        excuseTardy(ex.dataset.sid, ex.dataset.date, ex.dataset.pid, note ? (reason === 'Other' ? note : `${reason}: ${note}`) : reason);
+      });
+    }
     const form = $('#stu-form');
     if (!form) return;
     form.addEventListener('submit', (e) => {
@@ -2779,7 +2956,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + `<section class="dsec"><h3>Classroom</h3><form id="settings-form" class="m-body"><div class="grid2">`
       + `<label class="field"><span>Your name</span><input id="set-teacher" maxlength="60" autocomplete="name" value="${esc(S.settings.teacher)}" placeholder="Ms. Rivera" ${can ? '' : 'disabled'}></label>`
       + `<label class="field"><span>School</span><input id="set-school" maxlength="60" autocomplete="organization" value="${esc(S.settings.school)}" placeholder="Harbor View High" ${can ? '' : 'disabled'}></label></div>`
-      + `<label class="field"><span>Minutes after the bell before a tap counts as tardy</span><input id="set-grace" type="number" min="0" max="30" value="${esc(S.settings.graceMin)}" ${can ? '' : 'disabled'}></label>`
+      + `<p class="m-text small">Passing time and tardy grace are set for each period. To change them, open a period and select the pencil button next to its name.</p>`
       + `<label class="field"><span>Hosted site link</span><input id="set-base" type="url" inputmode="url" placeholder="${esc(auto || 'https://yourname.github.io/taproll/')}" value="${esc(S.settings.tagBase)}" ${can ? '' : 'disabled'}>`
       + `<small>Tags you write open this address when tapped on a phone. ${auto ? 'Leave it blank to use this page’s address.' : 'Leave it blank to write plain tag codes.'}</small></label>`
       + `<label class="check fit"><input type="checkbox" id="set-sound" ${prefs.sound ? 'checked' : ''}> Beep on each scan (this device)</label>`
@@ -2802,9 +2979,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         const base = $('#set-base').value.trim();
         const err = $('#set-err');
         if (base && !/^https:\/\/\S+$/i.test(base)) { err.textContent = 'The hosted site link has to start with https://'; err.hidden = false; return; }
-        const grace = Math.max(0, Math.min(30, Math.round(Number($('#set-grace').value) || 0)));
         const teacher = $('#set-teacher').value.trim(), school = $('#set-school').value.trim();
-        setSettings({ school, teacher, graceMin: grace, tagBase: base });
+        setSettings({ school, teacher, tagBase: base });
         saveAccountProfile(teacher, school);
       }
       closeModal();
@@ -2817,10 +2993,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
 
   const csvCell = (v) => { const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const toCsv = (rows) => rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
-  const HEAD = ['Date', 'Period', 'Course', 'Last name', 'First name', 'Status', 'Time', 'How'];
+  const HEAD = ['Date', 'Period', 'Course', 'Last name', 'First name', 'Status', 'Time', 'How', 'Note'];
   function rowsFor(date, p) {
     const marks = marksOf(date, p.id);
-    return rosterOf(p.id).map((st) => { const mk = marks[st.id]; return [date, p.num, p.course, st.last, st.first, mk ? STATUS[mk.s] : 'Not marked', mk ? fmtClock(mk.t) : '', mk ? (METHOD[mk.m] || mk.m) : '']; });
+    return rosterOf(p.id).map((st) => { const mk = marks[st.id]; return [date, p.num, p.course, st.last, st.first, mk ? markLabel(mk) : 'Not marked', mk ? fmtClock(mk.t) : '', mk ? (METHOD[mk.m] || mk.m) : '', mk && mk.why ? mk.why : '']; });
   }
   function exportPeriodCsv() {
     const p = S.periods[ui.periodId];
@@ -2967,6 +3143,13 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       case 'add-students': openAddStudents(ui.periodId); break;
       case 'mark-rest': markRestAbsent(); break;
       case 'open-student': openStudent(id); break;
+      case 'excuse-open':
+        ui.excuseFor = { date: el.dataset.date, pid: el.dataset.pid };
+        refreshStudent();
+        { const r = document.querySelector('#modal-root .excuse-form input[name="ex-why"]:checked'); if (r) r.focus(); }
+        break;
+      case 'excuse-cancel': ui.excuseFor = null; refreshStudent(); break;
+      case 'unexcuse': unexcuseTardy(el.dataset.sid, el.dataset.date, el.dataset.pid); break;
       case 'write-tag': writeTag(id); break;
       case 'link-tag': linkExisting(id); break;
       case 'unlink-tag': confirmUnlink(id); break;
