@@ -594,9 +594,28 @@ code {
 .ufield > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); pointer-events: none; }
 .pf-sum { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); }
 
-/* Student drawer: a tardy that can be excused */
+/* Student drawer: an absence or tardy to follow up on (excuse it, email a parent) */
 .dsec.late h3 { color: var(--t); }
+.dsec.absent h3 { color: var(--a); }
 .dsec.late.is-excused h3 { color: var(--p); }
+.sent-line { display: flex; align-items: center; gap: 6px; }
+.sent-line .ic, .sent .ic { width: 15px; height: 15px; color: var(--p); }
+
+/* Email parents: one row per absent or tardy student */
+.pm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.pm-row { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: center; gap: 10px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.pm-row .pill { justify-self: start; }
+.pill.a { color: var(--a); background: var(--a-soft); }
+.pm-who { min-width: 0; display: flex; flex-direction: column; }
+.pm-who b { font-size: 14.5px; }
+.pm-who span { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.pm-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.sent { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--p); white-space: nowrap; }
+.btn .cnt { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--accent); color: var(--on-accent); font: 700 11.5px/1 var(--body); }
+@media (max-width: 560px) {
+  .pm-row { grid-template-columns: 62px minmax(0, 1fr); }
+  .pm-act { grid-column: 2; justify-content: flex-start; }
+}
 .excuse-form { display: flex; flex-direction: column; gap: 12px; }
 .reasons { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .reasons legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
@@ -1169,7 +1188,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     eyeOff: '<path d="M4 4l16 16"/><path d="M9.6 6a9.6 9.6 0 0 1 2.4-.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.7 3.5M6.3 7.6A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9.3 9.3 0 0 0 4.2-1"/><path d="M10 10a2.8 2.8 0 0 0 4 4"/>',
     key: '<circle cx="8" cy="15" r="3.5"/><path d="M10.5 12.5 19 4M16 7l2.5 2.5M14 9l2 2"/>',
     chevron: '<path d="M9 6.5l5.5 5.5L9 17.5"/>',
-    users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.4c1.6.7 2.7 2.3 3 4.6"/>'
+    users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.4c1.6.7 2.7 2.3 3 4.6"/>',
+    mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.2"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/>'
   };
   const ic = (name) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
   const LOGO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8l3.4 3.4 6-7.2"/><path d="M15.8 8.4a5 5 0 0 1 0 7.2"/><path d="M18.7 5.9a8.6 8.6 0 0 1 0 12.2"/></svg>';
@@ -1191,6 +1211,50 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   // An excused tardy is stored as present (so it counts as on time) with xt set and the reason in why.
   const EXCUSES = ['Held by another teacher', 'Office pass', 'Late bus', 'Other'];
   const markLabel = (mk) => (mk.xt ? 'Excused tardy' : STATUS[mk.s]);
+
+  /* Parent emails. TapRoll never sends email itself: it opens a draft, addressed and written, in the teacher's own
+     email (their email app, Gmail or Outlook on the web), and the teacher reviews it and sends it. */
+  const EMAIL_RE = /^[^\s@,;<>()"']+@[^\s@,;<>()"']+\.[^\s@,;<>()"'.]{2,}$/;
+  // Up to 3 addresses, separated by commas, semicolons or spaces. Returns { ok, bad }.
+  function parseEmails(text) {
+    const parts = String(text || '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+    return { ok: [...new Set(parts.filter((x) => EMAIL_RE.test(x)))].slice(0, 3), bad: parts.filter((x) => !EMAIL_RE.test(x)) };
+  }
+  const MAIL_VIA = [['app', 'Email app'], ['gmail', 'Gmail'], ['outlook', 'Outlook']];
+  const needsEmail = (mk) => !!mk && !mk.xt && (mk.s === 'A' || mk.s === 'T');
+  function parentMessage(st, p, date, mk) {
+    const d = parseDate(date);
+    const day = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const short = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const cls = `${periodLabel(p)}${p.course ? ` (${p.course})` : ''}`;
+    const when = date === todayStr() ? `today, ${day}` : `on ${day}`;
+    const name = fullName(st);
+    let subject, line;
+    if (mk.s === 'A') {
+      subject = `${name} was absent from ${cls} on ${short}`;
+      line = `${name} was marked absent from ${cls} ${when}.`;
+    } else {
+      const bell = toMin(p.start), at = new Date(mk.t);
+      const late = bell == null ? 0 : at.getHours() * 60 + at.getMinutes() - bell;
+      subject = `${name} was late to ${cls} on ${short}`;
+      line = `${name} arrived late to ${cls} ${when}, checking in at ${fmtClock(mk.t)}${late > 0 ? `, ${late} minute${late === 1 ? '' : 's'} after the bell` : ''}.`;
+    }
+    const sign = [S.settings.teacher || (Session.user && Session.user.name) || '', S.settings.school || ''].filter(Boolean);
+    return { subject, body: ['Hello,', '', line, '', 'If you have any questions, please reply to this email.', '', 'Thank you,', ...sign].join('\r\n') };
+  }
+  function composeUrl(to, subject, body, via = prefs.mailVia) {
+    const e = encodeURIComponent;
+    if (via === 'gmail') return `https://mail.google.com/mail/?view=cm&fs=1&to=${e(to.join(','))}&su=${e(subject)}&body=${e(body)}`;
+    if (via === 'outlook') return `https://outlook.office.com/mail/deeplink/compose?to=${e(to.join(','))}&subject=${e(subject)}&body=${e(body)}`;
+    return `mailto:${to.map(e).join(',')}?subject=${e(subject)}&body=${e(body)}`;
+  }
+  // The "Email parent" link for one mark. Clicking it opens the draft and records when (n) on the mark.
+  function emailLink(st, p, date, mk, label) {
+    const msg = parentMessage(st, p, date, mk);
+    const web = prefs.mailVia !== 'app';
+    return `<a class="btn sm" href="${esc(composeUrl(st.parents, msg.subject, msg.body))}"${web ? ' target="_blank" rel="noopener"' : ''} data-act="email-parent" data-sid="${esc(st.id)}" data-date="${esc(date)}" data-pid="${esc(p.id)}">${ic('mail')} ${esc(label || 'Email parent')}</a>`;
+  }
+  const viaSeg = () => `<div class="seg" role="radiogroup" aria-label="Open parent emails in">${MAIL_VIA.map(([v, l]) => `<button type="button" role="radio" aria-checked="${prefs.mailVia === v}" data-act="mail-via" data-v="${v}">${l}</button>`).join('')}</div>`;
 
   // Bell times are typed, like 8:05, 805, 1:16 pm or 13:16. Without am/pm, 1 to 5 o'clock means afternoon and
   // 6 to 11 means morning, which fits a school day. Returns minutes after midnight, or null.
@@ -1220,11 +1284,12 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const ui = {
     screen: 'boot', ready: false, view: 'overview', periodId: null, date: todayStr(),
     filter: 'all', search: '', scanning: false, kiosk: false, readOnly: false,
-    syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null, excuseFor: null
+    syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null, excuseFor: null, parentsOpen: false
   };
   // Who is signed in. kind: 'device' (account saved in this browser), 'cloud' (Firebase account) or 'demo' (example classroom).
   const Session = { kind: null, user: null };
-  const prefs = { sound: true, tapAs: 'auto' };
+  // mailVia: where parent emails open on this device (the default email app, Gmail or Outlook on the web).
+  const prefs = { sound: true, tapAs: 'auto', mailVia: 'app' };
   const PKEY = 'taproll.prefs.v1';
   function loadPrefs() { try { const p = JSON.parse(localStorage.getItem(PKEY) || '{}'); if (isObj(p)) Object.assign(prefs, p); } catch (e) { /* storage blocked */ } }
   function savePrefs() { try { localStorage.setItem(PKEY, JSON.stringify(prefs)); } catch (e) { /* storage blocked */ } }
@@ -1240,6 +1305,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function normMark(mk) {
     const out = { s: mk.s, t: Number(mk.t) || 0, m: String(mk.m || 'manual') };
     if (mk.xt && mk.s === 'P') { out.xt = 1; if (mk.why) out.why = String(mk.why).slice(0, 90); }
+    // n: when a parent email was opened for this absence or tardy
+    if (Number(mk.n) && (mk.s === 'A' || mk.s === 'T')) out.n = Number(mk.n);
     return out;
   }
   function normStudent(s) {
@@ -1248,7 +1315,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       periods: Array.isArray(s.periods) ? s.periods.filter((x) => typeof x === 'string') : [],
       token: typeof s.token === 'string' && s.token ? s.token : null,
       uids: Array.isArray(s.uids) ? s.uids.map(String).filter(Boolean) : [],
-      tagAt: Number(s.tagAt) || null
+      tagAt: Number(s.tagAt) || null,
+      parents: Array.isArray(s.parents) ? parseEmails(s.parents.join(' ')).ok : []
     };
   }
   function cleanMap(map, norm) {
@@ -1504,7 +1572,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const mk = mark ? normMark(mark) : null;
       if (mk) per[sid] = mk; else delete per[sid];
       // Firestore merges into the stored mark field by field, so clear the excuse fields explicitly.
-      patch[sid] = mk ? { xt: null, why: null, ...mk } : null;
+      patch[sid] = mk ? { xt: null, why: null, n: null, ...mk } : null;
     }
     if (!Object.keys(per).length) delete day[pid];
     if (!Object.keys(day).length) delete S.days[date];
@@ -2298,7 +2366,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const tools = `<div class="rtools"><label class="search">${ic('search')}<span class="sr-only">Search students</span>`
       + `<input class="input" id="roster-search" type="search" placeholder="Search ${roster.length} students" value="${esc(ui.search)}" autocomplete="off"></label>`
       + `<div class="chips">${filters.map(([v, l, n]) => `<button class="chip" data-act="filter" data-v="${v}" aria-pressed="${ui.filter === v}">${l} <b>${n}</b></button>`).join('')}</div>`
-      + `${editable() ? `<div class="rtools-actions"><button class="btn sm" data-act="mark-rest" ${c.U ? '' : 'disabled'}>Mark ${c.U} not-yet absent</button><button class="btn sm primary" data-act="add-students">${ic('plus')} Add students</button></div>` : ''}</div>`;
+      + `${editable() ? `<div class="rtools-actions">${c.A + c.T ? `<button class="btn sm" data-act="email-parents">${ic('mail')} Email parents${pendingEmails(p, date) ? ` <b class="cnt">${pendingEmails(p, date)}</b>` : ''}</button>` : ''}`
+        + `<button class="btn sm" data-act="mark-rest" ${c.U ? '' : 'disabled'}>Mark ${c.U} not-yet absent</button><button class="btn sm primary" data-act="add-students">${ic('plus')} Add students</button></div>` : ''}</div>`;
     let grid;
     if (!roster.length) {
       grid = `<div class="empty"><h3>No students in ${esc(periodLabel(p))} yet</h3><p>Paste names from your class list or a spreadsheet. You can write or link each student’s NFC tag afterward.</p>`
@@ -2502,21 +2571,27 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     });
   }
 
+  // One student per line: "First Last", "Last, First" or spreadsheet columns. Any email addresses on the line are
+  // taken as parent emails, so "Maya Lopez, maya.mom@example.com" works too.
   function parseNames(text) {
-    return String(text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((line) => {
+    return String(text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((raw) => {
+      // Names never contain @, so every word with one is a parent email (or a mistyped one, which is skipped).
+      const found = parseEmails((raw.match(/[^\s,;<>()"']*@[^\s,;<>()"']*/g) || []).join(' '));
+      const parents = found.ok, badEmails = found.bad.length;
+      const line = raw.replace(/<?[^\s,;<>()"']*@[^\s,;<>()"']*>?/g, ' ').replace(/[\t ]*[,;]+[\t ]*(?=[,;\t]|$)/g, '').replace(/[ ]{2,}/g, ' ').trim().replace(/^[,;\t\s]+|[,;\t\s]+$/g, '');
       let first = '', last = '';
       if (line.includes('\t')) { const parts = line.split('\t').map((s) => s.trim()).filter(Boolean); first = parts[0] || ''; last = parts.slice(1).join(' '); }
       else if (line.includes(',')) { const i = line.indexOf(','); last = line.slice(0, i).trim(); first = line.slice(i + 1).trim(); }
       else { const parts = line.split(/\s+/); last = parts.length > 1 ? parts.pop() : ''; first = parts.join(' '); }
-      return { first: first.slice(0, 40), last: last.slice(0, 40) };
+      return { first: first.slice(0, 40), last: last.slice(0, 40), parents, badEmails };
     }).filter((n) => n.first || n.last);
   }
   function openAddStudents(pid) {
     if (!editable()) return;
     const list = periodList();
     openModal(`${modalHead('Add students', 'Paste names from a spreadsheet or type one per line.')}`
-      + `<form id="add-form" class="m-body"><label class="field"><span>Names</span><textarea id="af-names" placeholder="Maya Lopez&#10;Nguyen, Kevin&#10;Jordan Brooks"></textarea>`
-      + `<small>One student per line. “First Last” and “Last, First” both work.</small></label>`
+      + `<form id="add-form" class="m-body"><label class="field"><span>Names</span><textarea id="af-names" placeholder="Maya Lopez&#10;Nguyen, Kevin&#10;Jordan Brooks, jbrooks.parent@example.com"></textarea>`
+      + `<small>One student per line. “First Last” and “Last, First” both work. Add a parent’s email after a name to save it too.</small></label>`
       + `<div class="field"><span>Periods</span><div class="checks">${list.map((p) => `<label class="check"><input type="checkbox" name="af-p" value="${esc(p.id)}" ${p.id === pid ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
       + `<p class="m-text small" id="af-err" hidden></p>`
       + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">Add students</button></div></form>`, { label: 'Add students', focus: '#af-names' });
@@ -2527,9 +2602,13 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const err = $('#af-err');
       if (!names.length) { err.textContent = 'Type or paste at least one name.'; err.hidden = false; return; }
       if (!periods.length) { err.textContent = 'Pick at least one period.'; err.hidden = false; return; }
-      upsertStudents(names.map((n) => ({ id: 's' + rid(9), first: n.first, last: n.last, periods, token: null, uids: [], tagAt: null })));
+      upsertStudents(names.map((n) => ({ id: 's' + rid(9), first: n.first, last: n.last, periods, token: null, uids: [], tagAt: null, parents: n.parents })));
       closeModal();
-      toast({ kind: 'ok', text: `Added ${names.length} student${names.length === 1 ? '' : 's'}`, sub: periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ') });
+      const bad = names.reduce((sum, n) => sum + n.badEmails, 0);
+      toast({
+        kind: bad ? 'warn' : 'ok', text: `Added ${names.length} student${names.length === 1 ? '' : 's'}`,
+        sub: bad ? `${bad} parent email${bad === 1 ? '' : 's'} couldn’t be read. Add ${bad === 1 ? 'it' : 'them'} in each student’s details.` : periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ')
+      });
       scheduleRender();
     });
   }
@@ -2543,9 +2622,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     openModal(studentHtml(sid), { cls: 'drawer', label: 'Student', onClose: () => { ui.openStudent = null; ui.excuseFor = null; } });
     bindStudentForm(sid);
   }
-  // Tardies the drawer offers to excuse: the student's periods on the day being viewed (today from the overview),
-  // plus the check-in an Excuse button pointed at.
-  function lateMarks(st) {
+  // Absences and tardies the drawer can act on (excuse a tardy, email a parent): the student's periods on the day
+  // being viewed (today from the overview), plus the check-in an Excuse button pointed at.
+  function followUps(st) {
     const date = ui.view === 'period' ? ui.date : todayStr();
     const out = [];
     const seen = new Set();
@@ -2553,20 +2632,35 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       if (seen.has(d + '|' + pid) || !S.periods[pid] || !st.periods.includes(pid)) return;
       seen.add(d + '|' + pid);
       const mk = marksOf(d, pid)[st.id];
-      if (mk && (mk.s === 'T' || mk.xt)) out.push({ date: d, p: S.periods[pid], mk });
+      if (mk && (mk.s === 'T' || mk.s === 'A' || mk.xt)) out.push({ date: d, p: S.periods[pid], mk });
     };
     if (ui.excuseFor) add(ui.excuseFor.date, ui.excuseFor.pid);
     st.periods.map((id) => S.periods[id]).filter(Boolean).sort((a, b) => a.num - b.num).forEach((p) => add(date, p.id));
     return out;
   }
-  function lateSection(st, { date, p, mk }, first) {
+  // The parent email part of a follow-up: the button, when it was last opened, or a pointer to add an address.
+  function parentEmailBits(st, p, date, mk) {
+    if (!needsEmail(mk)) return { btn: '', note: '' };
+    if (!st.parents.length) return { btn: '', note: `<p class="m-text small">To email ${esc(st.first || 'their')} parent, add a parent email under Details below.</p>` };
+    return {
+      btn: emailLink(st, p, date, mk, mk.n ? 'Email parent again' : 'Email parent'),
+      note: mk.n ? `<p class="m-text small sent-line">${ic('check')}Parent email opened at ${esc(fmtClock(mk.n))}.</p>` : ''
+    };
+  }
+  function followSection(st, { date, p, mk }, first) {
+    const when = `${periodLabel(p)}${date !== todayStr() ? `, ${fmtDateShort(date)}` : ''}`;
+    const can = editable();
+    if (mk.s === 'A') {
+      const em = parentEmailBits(st, p, date, mk);
+      return `<section class="dsec${first ? ' first' : ''} follow absent"><h3>Absent · ${esc(when)}</h3>`
+        + `<p class="m-text">Marked absent.</p>${em.note}${em.btn ? `<div class="row">${em.btn}</div>` : ''}</section>`;
+    }
     const bell = toMin(p.start);
     const at = new Date(mk.t);
     const late = bell == null ? 0 : at.getHours() * 60 + at.getMinutes() - bell;
-    const when = `${periodLabel(p)}${date !== todayStr() ? `, ${fmtDateShort(date)}` : ''}`;
     const checked = `Checked in at ${fmtClock(mk.t)}${late > 0 ? `, ${late} minute${late === 1 ? '' : 's'} after the bell` : ''}.`;
     const ids = `data-sid="${esc(st.id)}" data-date="${esc(date)}" data-pid="${esc(p.id)}"`;
-    const can = editable();
+    const em = parentEmailBits(st, p, date, mk);
     let body;
     if (mk.xt) {
       body = `<p class="m-text">${esc(checked)} Excused${mk.why ? `: ${esc(mk.why)}` : ''}.</p>`
@@ -2578,9 +2672,52 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         + `</div></fieldset><label class="field"><span>Note <em>optional</em></span><input id="ex-note" maxlength="60" autocomplete="off" placeholder="Like the teacher’s name"></label>`
         + `<div class="row"><button type="submit" class="btn sm primary">Excuse tardy</button><button type="button" class="btn sm" data-act="excuse-cancel">Cancel</button></div></form>`;
     } else {
-      body = `<p class="m-text">${esc(checked)}</p>` + (can ? `<div class="row"><button type="button" class="btn sm" data-act="excuse-open" ${ids}>${ic('check')} Excuse tardy</button></div>` : '');
+      body = `<p class="m-text">${esc(checked)}</p>${em.note}`
+        + `<div class="row">${can ? `<button type="button" class="btn sm" data-act="excuse-open" ${ids}>${ic('check')} Excuse tardy</button>` : ''}${em.btn}</div>`;
     }
-    return `<section class="dsec${first ? ' first' : ''} late${mk.xt ? ' is-excused' : ''}"><h3>${mk.xt ? 'Excused tardy' : 'Tardy'} · ${esc(when)}</h3>${body}</section>`;
+    return `<section class="dsec${first ? ' first' : ''} follow late${mk.xt ? ' is-excused' : ''}"><h3>${mk.xt ? 'Excused tardy' : 'Tardy'} · ${esc(when)}</h3>${body}</section>`;
+  }
+  // Absent or tardy students in a period whose parent has an email on file and hasn't been emailed yet.
+  function pendingEmails(p, date) {
+    const marks = marksOf(date, p.id);
+    return rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n).length;
+  }
+  // Every absent or tardy student in the open period on the day being viewed, each with a button that opens a
+  // written email to their parent. refresh redraws the open list in place (after an email or a change of app).
+  function openParentEmails(refresh) {
+    const p = S.periods[ui.periodId];
+    if (!p) return;
+    const date = ui.date;
+    const marks = marksOf(date, p.id);
+    const rows = rosterOf(p.id).map((st) => ({ st, mk: marks[st.id] })).filter((r) => needsEmail(r.mk))
+      .sort((a, b) => (a.mk.s === b.mk.s ? byName(a.st, b.st) : (a.mk.s === 'A' ? -1 : 1)));
+    const day = date === todayStr() ? 'Today' : fmtDateShort(date);
+    const list = rows.length
+      ? `<ul class="pm-list">${rows.map(({ st, mk }) => {
+        const action = !st.parents.length
+          ? `<button type="button" class="btn sm" data-act="add-parent-email" data-id="${esc(st.id)}">${ic('plus')} Add parent email</button>`
+          : (mk.n ? `<span class="sent">${ic('check')}Opened ${esc(fmtClock(mk.n))}</span>${emailLink(st, p, date, mk, 'Email again')}` : emailLink(st, p, date, mk));
+        return `<li class="pm-row"><span class="pill ${mk.s === 'A' ? 'a' : 't'}">${mk.s === 'A' ? 'Absent' : 'Tardy'}</span>`
+          + `<span class="pm-who"><b>${esc(fullName(st))}</b><span>${st.parents.length ? esc(st.parents.join(', ')) : 'No parent email yet'}${mk.s === 'T' ? ` · in at ${esc(fmtClock(mk.t))}` : ''}</span></span>`
+          + `<span class="pm-act">${action}</span></li>`;
+      }).join('')}</ul>`
+      : `<p class="m-text">No one in ${esc(periodLabel(p))} is absent or tardy ${day === 'Today' ? 'today' : `on ${esc(day)}`}.</p>`;
+    const html = `${modalHead('Email parents', `${periodLabel(p)} · ${day}`)}<div class="m-body">`
+      + `<p class="m-text small">Each button opens an email to that student’s parent, already written. Read it over, then send it from your own account.</p>`
+      + `<div class="field"><span>Open emails in</span>${viaSeg()}</div>${list}</div>`;
+    const box = $('#modal-root .modal');
+    if (refresh && ui.parentsOpen && box) { box.innerHTML = html; return; }
+    openModal(html, { label: 'Email parents', onClose: () => { ui.parentsOpen = false; } });
+    ui.parentsOpen = true;
+  }
+  // Records that a parent email was opened for this mark, after the click has opened it.
+  function markEmailed(sid, date, pid) {
+    const mk = marksOf(date, pid)[sid];
+    if (!needsEmail(mk) || !editable()) return;
+    setMark(date, pid, sid, { ...mk, n: Date.now() });
+    if (ui.openStudent === sid) refreshStudent();
+    if (ui.parentsOpen) openParentEmails(true);
+    scheduleRender();
   }
   function excuseTardy(sid, date, pid, why) {
     const mk = marksOf(date, pid)[sid];
@@ -2622,12 +2759,12 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const rate = marked ? `${pct(h.P + h.T, marked)}%` : '—';
       return `<div class="hrow"><span class="pnum">P${esc(p.num)}</span><div class="cells">${h.cells.length ? h.cells.map((c) => `<span class="cell ${c.s}" title="${esc(fmtDay(c.d))}: ${esc(c.xt ? 'Excused tardy' : (STATUS[c.s] || 'Not marked'))}">${c.s === 'U' ? '·' : c.s}</span>`).join('') : '<span class="m-text small">No sessions yet</span>'}</div><span class="hrate">${rate}</span></div>`;
     }).join('');
-    const late = lateMarks(st);
+    const follow = followUps(st);
     return `<div class="m-head dr-head"><span class="av" style="--h:${hueOf(st.id)}">${esc(initials(st))}</span>`
       + `<div class="dr-title"><h2>${esc(fullName(st))}</h2><p>${esc(periods.map((p) => `P${p.num} ${p.course}`).join(' · ') || 'Not in any period')}</p></div>`
       + `<button class="btn ghost icon" data-act="close-modal" aria-label="Close">${ic('x')}</button></div>`
-      + late.map((e, i) => lateSection(st, e, i === 0)).join('')
-      + `<section class="dsec${late.length ? '' : ' first'}"><h3>NFC tag</h3>`
+      + follow.map((e, i) => followSection(st, e, i === 0)).join('')
+      + `<section class="dsec${follow.length ? '' : ' first'}"><h3>NFC tag</h3>`
       + `<div class="tagcard ${hasTag ? 'linked' : ''}">${ic('tag')}<div><b>${esc(tagLine)}</b><span>${esc(tagDetail || 'Write a new tag with an Android phone, or link a tag the student already has.')}</span></div></div>`
       + `${can ? `<div class="row"><button class="btn primary" data-act="write-tag" data-id="${esc(st.id)}" ${nfc.ok ? '' : 'disabled'}>${ic('nfc')} ${hasTag ? 'Write a new tag' : 'Write tag'}</button>`
         + `<button class="btn" data-act="link-tag" data-id="${esc(st.id)}">${ic('link')} Link existing tag</button>`
@@ -2640,6 +2777,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + `<section class="dsec"><h3>Last 15 class sessions</h3><div class="hist">${hist || '<p class="m-text small">Not in any period.</p>'}</div></section>`
       + `${can ? `<section class="dsec"><h3>Details</h3><form id="stu-form" class="m-body"><div class="grid2"><label class="field"><span>First name</span><input id="sf-first" maxlength="40" value="${esc(st.first)}"></label>`
         + `<label class="field"><span>Last name</span><input id="sf-last" maxlength="40" value="${esc(st.last)}"></label></div>`
+        + `<label class="field"><span>Parent or guardian email <em>optional</em></span><input id="sf-parents" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="300" placeholder="parent@example.com" value="${esc(st.parents.join(', '))}">`
+        + `<small>Used to email a parent when ${esc(st.first || 'this student')} is absent or tardy. Separate two addresses with a comma.</small></label>`
         + `<div class="field"><span>Periods</span><div class="checks">${periodList().map((p) => `<label class="check"><input type="checkbox" name="sp" value="${esc(p.id)}" ${st.periods.includes(p.id) ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
         + `<p class="m-text small" id="sf-err" hidden></p>`
         + `<div class="m-foot"><button type="button" class="btn danger spacer" data-act="delete-student" data-id="${esc(st.id)}">${ic('trash')} Remove student</button><button type="submit" class="btn primary">Save</button></div></form></section>` : ''}`;
@@ -2664,9 +2803,11 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const first = $('#sf-first').value.trim(), last = $('#sf-last').value.trim();
       const periods = Array.from(form.querySelectorAll('input[name="sp"]:checked')).map((i) => i.value);
       const err = $('#sf-err');
+      const emails = parseEmails($('#sf-parents').value);
       if (!first && !last) { err.textContent = 'Enter a name.'; err.hidden = false; return; }
       if (!periods.length) { err.textContent = 'Keep at least one period, or remove the student instead.'; err.hidden = false; return; }
-      upsertStudent({ ...st, first, last, periods });
+      if (emails.bad.length) { err.textContent = `“${emails.bad[0]}” doesn’t look like an email address. Use one like parent@example.com.`; err.hidden = false; $('#sf-parents').focus(); return; }
+      upsertStudent({ ...st, first, last, periods, parents: emails.ok });
       refreshStudent();
       toast({ kind: 'ok', text: 'Student saved', sub: `${first} ${last}`.trim() });
       scheduleRender();
@@ -2962,6 +3103,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + `<label class="check fit"><input type="checkbox" id="set-sound" ${prefs.sound ? 'checked' : ''}> Beep on each scan (this device)</label>`
       + `<p class="m-text small" id="set-err" hidden></p>`
       + `<div class="m-foot"><button type="submit" class="btn primary">Save settings</button></div></form></section>`
+      + `<section class="dsec"><h3>Parent emails</h3><p class="m-text small">When a student is absent or tardy, TapRoll writes the email to their parent. It opens in your own email so you can check it and send it. Add parent emails in each student’s details.</p>`
+      + `<div class="field"><span>Open emails in (this device)</span>${viaSeg()}</div></section>`
       + `<section class="dsec"><h3>Data</h3><p class="m-text small">${esc(storageText())}</p>`
       + `<div class="row"><button class="btn" data-act="export-all">${ic('download')} All attendance (CSV)</button><button class="btn" data-act="export-backup">${ic('download')} Download backup</button>`
       + `${can ? `<label class="btn" for="set-import">${ic('upload')} Restore backup</label><input type="file" id="set-import" accept="application/json,.json" hidden>` : ''}</div>`
@@ -3134,6 +3277,18 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       case 'mark': markManual(el.dataset.sid, el.dataset.s); break;
       case 'filter': ui.filter = el.dataset.v; scheduleRender(); break;
       case 'tap-as': prefs.tapAs = el.dataset.v; savePrefs(); scheduleRender(); break;
+      case 'email-parents': openParentEmails(); break;
+      // The link opens the draft itself; afterwards, note that this parent was emailed.
+      case 'email-parent': { const d = el.dataset; setTimeout(() => markEmailed(d.sid, d.date, d.pid), 60); break; }
+      case 'mail-via':
+        prefs.mailVia = el.dataset.v; savePrefs();
+        el.parentElement.querySelectorAll('[data-act="mail-via"]').forEach((b) => b.setAttribute('aria-checked', String(b === el)));
+        if (ui.parentsOpen) openParentEmails(true);
+        break;
+      case 'add-parent-email':
+        openStudent(id);
+        setTimeout(() => { const f = $('#sf-parents'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus({ preventScroll: true }); } }, 80);
+        break;
       case 'kiosk': enterKiosk(); break;
       case 'exit-kiosk': exitKiosk(); break;
       case 'simulate': simulateTap(); break;
