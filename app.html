@@ -2400,7 +2400,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     } else if (ui.readOnly) out += `<div class="banner warn">${ic('alert')}<p>You can view these classes, but changes aren’t being saved.</p></div>`;
     if (School.invite && School.state !== 'member' && !ui.hideInvite) {
       const inv = School.invite;
-      out += `<div class="banner">${ic('school')}<p><b>${esc(inv.school || 'Your school')} invited you to join as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}.</b> ${inv.role === 'teacher' ? 'The school office will see your classes and can add students to them.' : 'You’ll see attendance for every class.'}</p>`
+      const more = School.inviteList.length - 1;
+      out += `<div class="banner">${ic('school')}<p><b>${esc(inv.school || 'Your school')} invited you to join as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}${more > 0 ? `, and ${more === 1 ? 'another school has' : `${more} other schools have`} too` : ''}.</b> ${inv.role === 'teacher' ? 'The school office will see your classes and can add students to them.' : 'You’ll see attendance for every class.'}</p>`
         + `<button class="btn sm primary" data-act="sc-panel">Review invite</button><button class="btn sm ghost" data-act="hide-invite">Not now</button></div>`;
     }
     if (Session.kind === 'demo' && !ui.hideSample) {
@@ -3792,8 +3793,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
      the School office can be explored without one. In Firestore:
        schools/<sid>                     { name, owner, createdAt }            owner: whoever set it up (always an admin)
        schools/<sid>/members/<uid>       { role, name, email, at }             role: admin | registrar | teacher
-       schools/<sid>/invites/<email>     { email, role, byName, byEmail, at }  pending invites, for the school's own list
-       invites/<email>                   { sid, school, role, byName, byEmail, at }   so the invited person finds theirs
+       schools/<sid>/invites/<email>     { email, role, byName, byEmail, at }  pending invites; joining deletes it
+       invites/<sid>~<email>             { sid, email, school, role, byName, byEmail, at }   so the invited person can
+                                         find invites from any school with a query on email
        teachers/<uid>.schoolId           set by the teacher when they join; it's their consent to the school's access
      A teacher's classes stay in their own space (teachers/<uid>/...). The Firestore rules let the school's admins and
      registrars read them, and change class rosters, only while the teacher is a member and has schoolId set.
@@ -3816,7 +3818,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const School = {
     kind: null, me: null,
     sid: '', name: '', owner: '', role: null, state: 'off', error: null,
-    invite: null, inviteState: 'idle',
+    invite: null, inviteList: [], inviteState: 'idle',
     members: {}, invites: {}, membersLoaded: false,
     t: {}, date: todayStr(),
     subs: [], staffSubs: [], tSubs: {}, watching: false, autoOpened: false, verifySent: false, busy: false
@@ -3829,7 +3831,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     School.subs.forEach(offSub); School.staffSubs.forEach(offSub);
     Object.keys(School.tSubs).forEach(unwatchTeacher);
     Object.assign(School, {
-      kind: null, me: null, sid: '', name: '', owner: '', role: null, state: 'off', error: null, invite: null, inviteState: 'idle',
+      kind: null, me: null, sid: '', name: '', owner: '', role: null, state: 'off', error: null, invite: null, inviteList: [], inviteState: 'idle',
       members: {}, invites: {}, membersLoaded: false, t: {}, date: todayStr(), subs: [], staffSubs: [], tSubs: {},
       watching: false, autoOpened: false, verifySent: false, busy: false
     });
@@ -3852,23 +3854,28 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     School.state = 'none';
     checkInvite();
   }
-  // Each account can have one pending invite at a time, stored under its email address. Reading it needs a
-  // confirmed email, so an invite can't be picked up by someone who only typed that address.
+  // Invites are found by email address, from any school. Reading them needs a confirmed email, so an invite can't be
+  // picked up by someone who only typed that address.
   async function checkInvite() {
     if (School.kind !== 'cloud' || !School.me || !School.me.email || !Cloud.fs) return;
-    if (!School.me.verified) { School.invite = null; School.inviteState = 'unverified'; schoolChanged(); return; }
+    if (!School.me.verified) { setInvites([]); School.inviteState = 'unverified'; schoolChanged(); return; }
     School.inviteState = 'checking';
     try {
-      const snap = await Cloud.fs.doc(`invites/${School.me.email}`).get();
-      const inv = snap.exists ? { ...(snap.data() || {}), email: School.me.email } : null;
-      School.invite = inv && inv.sid && ROLE_LABEL[inv.role] && !(School.state === 'member' && inv.sid === School.sid) ? inv : null;
-      School.inviteState = School.invite ? 'found' : 'none';
+      const qs = await Cloud.fs.collection('invites').where('email', '==', School.me.email).get();
+      setInvites(qs.docs.map((d) => ({ ...(d.data() || {}), email: School.me.email })));
+      School.inviteState = School.inviteList.length ? 'found' : 'none';
     } catch (e) {
-      School.invite = null;
+      setInvites([]);
       School.inviteState = String((e && e.code) || '').includes('permission-denied') ? 'denied' : 'error';
     }
     schoolChanged();
   }
+  function setInvites(list) {
+    School.inviteList = list.filter((inv) => inv && inv.sid && ROLE_LABEL[inv.role] && !(School.state === 'member' && inv.sid === School.sid))
+      .sort((a, b) => (b.at || 0) - (a.at || 0));
+    School.invite = School.inviteList[0] || null;
+  }
+  const findInvite = (sid) => School.inviteList.find((inv) => inv.sid === sid) || null;
   // Called whenever the teacher's profile changes. schoolId says which school they've joined.
   function schoolSync() {
     if (School.kind !== 'cloud' || !Store.loaded.settings) return;
@@ -3893,7 +3900,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       School.role = ROLE_LABEL[m.role] ? m.role : 'teacher';
       School.state = 'member';
       if (isStaffRole(School.role)) startStaff(); else stopStaff();
-      if (School.invite && School.invite.sid === sid) { School.invite = null; School.inviteState = 'none'; }
+      if (School.inviteList.some((inv) => inv.sid === sid)) { setInvites(School.inviteList); if (!School.inviteList.length) School.inviteState = 'none'; }
       maybeOpenOffice();
       applySchoolLink();
       schoolChanged();
@@ -4140,34 +4147,37 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const sid = 'sc' + rid(10);
     const at = Date.now();
     const b = Cloud.fs.batch();
-    if (School.state === 'member' && School.sid && School.owner !== me.uid) b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
+    if (School.state === 'member' && School.sid && School.owner && School.owner !== me.uid) b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
     b.set(dref(`schools/${sid}`), { name, owner: me.uid, createdAt: at });
-    b.set(dref(`schools/${sid}/members/${me.uid}`), { role: 'admin', name: meName(), email: me.email, at });
+    b.set(dref(`schools/${sid}/members/${me.uid}`), { role: 'admin', name: meName().slice(0, 80), email: me.email, at });
     b.set(dref(`teachers/${me.uid}`), { schoolId: sid, school: name }, { merge: true });
     School.autoOpened = false;   // Firestore applies the batch on this device right away, so the office can open next
     await b.commit();
   }
-  async function joinSchool() {
-    const inv = School.invite, me = School.me;
+  // Joining deletes both copies of the invite in the same batch; the rules require it, so an invite works once.
+  async function joinSchool(inv) {
+    const me = School.me;
     if (!inv) return;
     const b = Cloud.fs.batch();
-    if (School.state === 'member' && School.sid && School.sid !== inv.sid) b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
-    b.set(dref(`schools/${inv.sid}/members/${me.uid}`), { role: inv.role, name: meName(), email: me.email, at: Date.now() });
-    b.delete(dref(`invites/${me.email}`));
+    if (School.state === 'member' && School.sid && School.sid !== inv.sid && School.owner && School.owner !== me.uid) b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
+    b.set(dref(`schools/${inv.sid}/members/${me.uid}`), { role: inv.role, name: meName().slice(0, 80), email: me.email, at: Date.now() });
     b.delete(dref(`schools/${inv.sid}/invites/${me.email}`));
+    b.delete(dref(`invites/${inv.sid}~${me.email}`));
     b.set(dref(`teachers/${me.uid}`), { schoolId: inv.sid, school: inv.school || '' }, { merge: true });
     School.autoOpened = false;
     await b.commit();
-    School.invite = null; School.inviteState = 'none';
+    setInvites(School.inviteList.filter((x) => x.sid !== inv.sid));
+    School.inviteState = School.inviteList.length ? 'found' : 'none';
   }
-  async function declineInvite() {
-    const inv = School.invite, me = School.me;
+  async function declineInvite(inv) {
+    const me = School.me;
     if (!inv) return;
     const b = Cloud.fs.batch();
-    b.delete(dref(`invites/${me.email}`));
     b.delete(dref(`schools/${inv.sid}/invites/${me.email}`));
+    b.delete(dref(`invites/${inv.sid}~${me.email}`));
     await b.commit();
-    School.invite = null; School.inviteState = 'none';
+    setInvites(School.inviteList.filter((x) => x.sid !== inv.sid));
+    School.inviteState = School.inviteList.length ? 'found' : 'none';
   }
   async function leaveSchool() {
     const me = School.me;
@@ -4179,23 +4189,32 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   }
   async function inviteOne(email, role) {
     const at = Date.now();
-    const rec = { role, byName: meName(), byEmail: School.me.email, at };
+    const rec = { role, byName: meName().slice(0, 80), byEmail: School.me.email, at };
     if (School.kind === 'demo') { School.invites[email] = { ...rec, email }; saveDemoSchool(); return; }
     const b = Cloud.fs.batch();
-    b.set(dref(`invites/${email}`), { ...rec, sid: School.sid, school: School.name });
     b.set(dref(`schools/${School.sid}/invites/${email}`), { ...rec, email });
+    b.set(dref(`invites/${School.sid}~${email}`), { ...rec, email, sid: School.sid, school: School.name });
     await b.commit();
   }
   async function cancelInvite(email) {
     if (School.kind === 'demo') { delete School.invites[email]; saveDemoSchool(); return; }
     const b = Cloud.fs.batch();
-    b.delete(dref(`invites/${email}`));
     b.delete(dref(`schools/${School.sid}/invites/${email}`));
+    b.delete(dref(`invites/${School.sid}~${email}`));
     await b.commit();
   }
+  // Removing someone also cancels any pending invite for their email, so they can't come back through it.
   async function removeMember(uid) {
-    if (School.kind === 'demo') { delete School.members[uid]; delete School.t[uid]; saveDemoSchool(); return; }
-    await dref(`schools/${School.sid}/members/${uid}`).delete();
+    const email = emailKey((School.members[uid] || {}).email);
+    const inv = email ? School.invites[email] : null;
+    if (School.kind === 'demo') { delete School.members[uid]; delete School.t[uid]; if (inv) delete School.invites[email]; saveDemoSchool(); return; }
+    const b = Cloud.fs.batch();
+    b.delete(dref(`schools/${School.sid}/members/${uid}`));
+    if (inv && (inv.role === 'teacher' || isAdmin())) {
+      b.delete(dref(`schools/${School.sid}/invites/${email}`));
+      b.delete(dref(`invites/${School.sid}~${email}`));
+    }
+    await b.commit();
   }
   async function setMemberRole(uid, role) {
     if (School.kind === 'demo') { School.members[uid] = { ...School.members[uid], role }; saveDemoSchool(); return; }
@@ -4722,7 +4741,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         try { await inviteOne(email, role); ok.push({ email, role }); }
         catch (ex) {
           const denied = String((ex && ex.code) || '').includes('permission-denied');
-          skipped.push({ email, why: denied ? 'they may already have an invite from another school, or your Firestore rules need updating' : 'couldn’t send the invite. Try again.' });
+          skipped.push({ email, why: denied ? (School.invites[email] && School.invites[email].role !== 'teacher' && !isAdmin() ? 'an admin sent this invite, so only an admin can change it' : 'Firestore didn’t allow the invite. If you run this TapRoll site, paste the latest rules from the setup guide into Firebase.') : 'couldn’t send the invite. Try again.' });
         }
       }
       schoolChanged();
@@ -4783,13 +4802,12 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         + (owner ? '<p class="m-text small">You set up this school, so you stay its admin. To hand it to someone else, email us.</p>' : '');
     }
     let out = '';
-    const inv = School.invite;
-    if (inv) {
-      out += `<div class="sc-invite"><div class="sc-card">${ic('school')}<div><b>${esc(inv.school || 'A school')}</b><span>Invited you as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}</span></div></div>`
+    if (School.inviteList.length) {
+      out += School.inviteList.map((inv) => `<div class="sc-invite"><div class="sc-card">${ic('school')}<div><b>${esc(inv.school || 'A school')}</b><span>Invited you as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}</span></div></div>`
         + `<p class="m-text small">Sent by ${esc(inv.byName || 'the school office')}${inv.byEmail ? ` (${esc(inv.byEmail)})` : ''}. ${inv.role === 'teacher'
           ? `When you join, ${esc(inv.school || 'the school')}’s admins and registrars can see your classes and attendance, and can add students to your classes.`
           : `When you join, you’ll see attendance for every class at ${esc(inv.school || 'the school')}.`} Only join a school you work for.</p>`
-        + `<div class="row"><button type="button" class="btn primary" data-act="sc-join">Join ${esc(inv.school || 'school')}</button><button type="button" class="btn" data-act="sc-decline">Decline</button></div></div>`;
+        + `<div class="row"><button type="button" class="btn primary" data-act="sc-join" data-sid="${esc(inv.sid)}">Join ${esc(inv.school || 'school')}</button><button type="button" class="btn" data-act="sc-decline" data-sid="${esc(inv.sid)}">Decline</button></div></div>`).join('');
     } else if (School.inviteState === 'unverified') {
       out += verifyBlock('Then any invite from your school shows up here.');
     } else if (School.inviteState === 'denied' || School.inviteState === 'error') {
@@ -4810,6 +4828,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function openSchoolCreate() {
     if (Session.kind !== 'cloud') return;
     ui.scPanel = false;
+    if (School.state === 'loading' || (School.state === 'member' && !School.owner)) { toast({ kind: 'info', text: 'Still loading your school', sub: 'Try again in a moment.' }); return; }
     if (School.state === 'member' && School.owner === meUid()) { toast({ kind: 'info', text: `You already run ${School.name}` }); return; }
     const leaving = School.state === 'member' ? School.name : '';
     openModal(`${modalHead('Set up your school', 'You’ll be its admin. Then invite your registrar and teachers.')}`
@@ -5220,21 +5239,27 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       case 'sc-create': openSchoolCreate(); break;
       case 'sc-rename': openRename(); break;
       case 'sc-join':
+        if (School.state === 'loading' || (School.state === 'member' && !School.owner)) { toast({ kind: 'info', text: 'Still loading your school', sub: 'Try again in a moment.' }); break; }
         if (School.state === 'member' && School.owner === meUid()) { toast({ kind: 'warn', text: `You run ${School.name}`, sub: 'Email us to hand it to someone else before joining another school.' }); break; }
         el.disabled = true;
         {
-          const inv = School.invite || {};
+          const inv = findInvite(d.sid) || School.invite || {};
           pendingSchoolLink = isStaffRole(inv.role);
-          joinSchool().then(() => {
+          joinSchool(inv).then(() => {
             closeModal();
             toast({ kind: 'ok', text: `You joined ${inv.school || 'your school'}`, sub: inv.role === 'teacher' ? 'The school office can now see your classes.' : 'Opening the School office…' });
             schoolChanged();
           })
-            .catch((e) => { pendingSchoolLink = false; el.disabled = false; toast({ kind: 'warn', text: 'Couldn’t join', sub: schoolErrText(e, 'joining the school') }); });
+            .catch((e) => {
+              pendingSchoolLink = false; el.disabled = false;
+              const denied = String((e && e.code) || '').includes('permission-denied');
+              toast({ kind: 'warn', text: 'Couldn’t join', sub: denied ? 'The invite may have been canceled or changed. Ask the school office to invite you again.' : schoolErrText(e, 'joining the school') });
+              if (denied) checkInvite();
+            });
         }
         break;
       case 'sc-decline':
-        declineInvite().then(() => { toast({ kind: 'info', text: 'Invite declined' }); schoolChanged(); })
+        declineInvite(findInvite(d.sid) || School.invite).then(() => { toast({ kind: 'info', text: 'Invite declined' }); schoolChanged(); })
           .catch((e) => toast({ kind: 'warn', text: 'Couldn’t decline', sub: schoolErrText(e, 'that change') }));
         break;
       case 'sc-leave':
@@ -6144,72 +6169,101 @@ service cloud.firestore {
     function isStaff(sid) { return isMember(sid) && myRole(sid) in ['admin', 'registrar']; }
     function isAdmin(sid) { return isMember(sid) && myRole(sid) == 'admin'; }
     function ownerOf(sid) { return get(/databases/$(database)/documents/schools/$(sid)).data.owner; }
-    // A school's admins and registrars can see a teacher's classes while the
-    // teacher is a member of that school and has joined it (schoolId).
+    function profile(uid) { return get(/databases/$(database)/documents/teachers/$(uid)).data; }
+    // A school's admins and registrars can see a teacher's classes while the teacher
+    // is a member of that school and has joined it (schoolId), and only the classes
+    // the teacher uses now (ws).
     function staffOver(uid) {
-      let sid = get(/databases/$(database)/documents/teachers/$(uid)).data.get('schoolId', '');
+      let sid = profile(uid).get('schoolId', '');
       return sid != '' && isStaff(sid)
         && exists(/databases/$(database)/documents/schools/$(sid)/members/$(uid));
     }
+    function staffOverWs(uid, ws) { return staffOver(uid) && profile(uid).get('ws', '') == ws; }
+    // Joining uses up the invite: the school's own copy names the role, and the
+    // same batch that adds the member must delete it.
     function invitedTo(sid, role) {
-      let inv = get(/databases/$(database)/documents/invites/$(myEmail()));
-      return inv.data.sid == sid && inv.data.role == role;
+      return get(/databases/$(database)/documents/schools/$(sid)/invites/$(request.auth.token.email.lower())).data.role == role
+        && !existsAfter(/databases/$(database)/documents/schools/$(sid)/invites/$(request.auth.token.email.lower()));
     }
     // Only people with a confirmed email can invite, so invites show who really sent them.
     // Registrars invite teachers. Admins invite anyone.
     function canInvite(sid, d) {
       return signedIn() && verified() && d.byEmail == myEmail()
+        && d.byName is string && d.byName.size() <= 80
         && d.role in ['teacher', 'registrar', 'admin']
         && ((d.role == 'teacher' && isStaff(sid)) || isAdmin(sid));
     }
+    // Registrars can't replace or cancel an invite for an admin or registrar.
+    function canTouchInvite(sid, r) { return r == null || r.data.role == 'teacher' || isAdmin(sid); }
     function validName(d) { return d.name is string && d.name.size() > 0 && d.name.size() <= 80; }
+    function memberFields(d) {
+      return d.keys().hasOnly(['role', 'name', 'email', 'at'])
+        && d.role in ['teacher', 'registrar', 'admin'] && d.name is string && d.name.size() <= 80;
+    }
 
     // Each teacher reads and writes their own classes. Their school's admins and
-    // registrars can read them, and can put students in class rosters.
+    // registrars can read them and put students in class rosters.
     match /teachers/{uid}/{document=**} {
       allow read, write: if signedIn() && me() == uid;
+    }
+    match /teachers/{uid} {
       allow read: if signedIn() && staffOver(uid);
     }
+    match /teachers/{uid}/ws/{ws}/{document=**} {
+      allow read: if signedIn() && staffOverWs(uid, ws);
+    }
     match /teachers/{uid}/ws/{ws}/meta/roster {
-      allow create, update: if signedIn() && staffOver(uid);
+      allow create, update: if signedIn() && staffOverWs(uid, ws);
     }
 
     // Whoever sets up a school owns it and is its first admin.
     match /schools/{sid} {
       allow read: if isMember(sid);
-      allow create: if signedIn() && request.resource.data.owner == me() && validName(request.resource.data);
-      allow update: if isAdmin(sid) && request.resource.data.owner == resource.data.owner && validName(request.resource.data);
+      allow create: if signedIn() && request.resource.data.owner == me() && validName(request.resource.data)
+        && request.resource.data.keys().hasOnly(['name', 'owner', 'createdAt']);
+      allow update: if isAdmin(sid) && request.resource.data.owner == resource.data.owner
+        && validName(request.resource.data) && request.resource.data.keys().hasOnly(['name', 'owner', 'createdAt']);
     }
     match /schools/{sid}/members/{uid} {
-      allow read: if isMember(sid) || (signedIn() && uid == me());
-      // Joining: the owner adds themselves as admin, and everyone else accepts an
-      // invite sent to their confirmed email, with the role it names.
-      allow create: if signedIn() && uid == me() && request.resource.data.email == myEmail() && (
-        (request.resource.data.role == 'admin'
-          && getAfter(/databases/$(database)/documents/schools/$(sid)).data.owner == me())
-        || (verified() && invitedTo(sid, request.resource.data.role)));
-      // Admins change roles. Members can update their own name.
-      allow update: if (isAdmin(sid) && uid != ownerOf(sid)
-          && request.resource.data.role in ['teacher', 'registrar', 'admin'])
+      // Admins and registrars see who's in the school. Everyone sees their own membership.
+      allow read: if isStaff(sid) || (signedIn() && uid == me());
+      // Joining: the owner adds themselves as admin. Anyone else accepts an invite
+      // sent to their confirmed email, with the role it names.
+      allow create: if signedIn() && uid == me() && memberFields(request.resource.data)
+        && request.resource.data.email == myEmail() && (
+          (request.resource.data.role == 'admin'
+            && getAfter(/databases/$(database)/documents/schools/$(sid)).data.owner == me())
+          || (verified() && invitedTo(sid, request.resource.data.role)));
+      // Admins change roles. Members can change their own name.
+      allow update: if memberFields(request.resource.data) && (
+        (isAdmin(sid) && uid != ownerOf(sid))
         || (signedIn() && uid == me()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])));
       // Anyone but the owner can leave. Admins remove anyone else; registrars remove teachers.
       allow delete: if signedIn() && uid != ownerOf(sid)
         && (uid == me() || isAdmin(sid) || (isStaff(sid) && resource.data.role == 'teacher'));
     }
 
-    // Invites: one pending invite per email address. The school keeps its own list.
-    match /invites/{email} {
-      allow get: if signedIn() && ((verified() && myEmail() == email) || isStaff(resource.data.sid));
-      allow create: if canInvite(request.resource.data.sid, request.resource.data);
-      allow update: if signedIn() && isStaff(resource.data.sid)
-        && canInvite(request.resource.data.sid, request.resource.data);
-      allow delete: if signedIn() && ((verified() && myEmail() == email) || isStaff(resource.data.sid));
-    }
+    // Pending invites. The school's own list is what lets someone join...
     match /schools/{sid}/invites/{email} {
       allow read: if isStaff(sid);
-      allow create, update: if canInvite(sid, request.resource.data);
-      allow delete: if isStaff(sid) || (signedIn() && verified() && myEmail() == email);
+      allow create, update: if canInvite(sid, request.resource.data) && canTouchInvite(sid, resource)
+        && request.resource.data.email == email
+        && request.resource.data.keys().hasOnly(['email', 'role', 'byName', 'byEmail', 'at']);
+      allow delete: if (isStaff(sid) && canTouchInvite(sid, resource))
+        || (signedIn() && verified() && myEmail() == email);
+    }
+    // ...and a copy keyed by school and email lets the invited person find it.
+    match /invites/{iid} {
+      allow list: if signedIn() && verified() && resource.data.email == myEmail();
+      allow get: if signedIn() && ((verified() && resource.data.email == myEmail()) || isStaff(resource.data.sid));
+      allow create, update: if iid == request.resource.data.sid + '~' + request.resource.data.email
+        && canInvite(request.resource.data.sid, request.resource.data)
+        && canTouchInvite(request.resource.data.sid, resource)
+        && request.resource.data.school == get(/databases/$(database)/documents/schools/$(request.resource.data.sid)).data.name
+        && request.resource.data.keys().hasOnly(['sid', 'email', 'school', 'role', 'byName', 'byEmail', 'at']);
+      allow delete: if signedIn() && (resource == null
+        || (verified() && resource.data.email == myEmail()) || isStaff(resource.data.sid));
     }
   }
 }`;
