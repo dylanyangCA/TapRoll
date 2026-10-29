@@ -929,6 +929,167 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   .af-head h1 { font-size: 28px; }
 }
 
+/* ---------- School office ---------- */
+.pitem.school .pnum svg { width: 19px; height: 19px; }
+.pitem.school:not(.is-active) .pnum { color: var(--accent); }
+.sc-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: -4px; overflow-x: auto; scrollbar-width: none; }
+.sc-tabs::-webkit-scrollbar { display: none; }
+.sc-tabs button {
+  display: inline-flex; align-items: center; gap: 7px; flex: none;
+  padding: 9px 14px 10px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: transparent; font-weight: 600; font-size: 14px; color: var(--muted);
+}
+.sc-tabs button:hover { color: var(--ink); }
+.sc-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.sc-tabs .cnt { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--accent); color: var(--on-accent); font: 700 11.5px/1 var(--body); }
+.sc-who { min-width: 0; display: flex; flex-direction: column; text-align: left; }
+.sc-who b { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-who b em { font-style: normal; font-weight: 500; color: var(--muted); }
+.sc-who > span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.sc-live { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sc-trow {
+  width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) minmax(150px, 230px) 84px; align-items: center; gap: 12px 14px;
+  padding: 11px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); text-align: left;
+}
+.sc-trow:hover { border-color: var(--line-2); }
+.sc-trow.ph-now { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.sc-trow .av { width: 40px; height: 40px; box-shadow: none; }
+.sc-trow .phase { justify-self: end; }
+.sc-meter { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sc-meter .bar { height: 8px; }
+.sc-nums { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-nums b { font: 700 15px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.sc-absent { list-style: none; margin: 0; padding: 4px 14px; }
+.sc-absent li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.sc-absent li:last-child { border-bottom: 0; }
+.sc-absent .av { width: 34px; height: 34px; font-size: 12px; box-shadow: none; }
+.sc-absent .wname { min-width: 0; display: flex; flex-direction: column; }
+.sc-absent .wname b { font-size: 14px; font-weight: 600; }
+.sc-absent .wname span { font-size: 12px; color: var(--a); }
+
+.sc-people { list-style: none; margin: 0; padding: 4px 14px; }
+.sc-prow { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto; gap: 10px 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.sc-prow:last-child { border-bottom: 0; }
+.sc-prow .av { width: 38px; height: 38px; font-size: 12.5px; box-shadow: none; }
+.av-pend { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--line-2); }
+.av-pend .ic { width: 17px; height: 17px; }
+.sc-pact { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.role { justify-self: start; padding: 4px 9px; border-radius: 999px; font: 700 11px/1.2 var(--body); letter-spacing: .02em; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); white-space: nowrap; }
+.role.r-admin { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.role.r-registrar { background: var(--e-soft); color: var(--e); border-color: transparent; }
+
+.sc-students { list-style: none; margin: 0; padding: 4px 6px; }
+.sc-students li + li { border-top: 1px solid var(--line); }
+.sc-srow { width: 100%; display: grid; grid-template-columns: 36px minmax(150px, 1fr) minmax(0, 1.3fr) 22px; gap: 10px 14px; align-items: center; padding: 10px 8px; border: 0; background: transparent; border-radius: 10px; text-align: left; }
+.sc-srow:hover { background: var(--surface-2); }
+.sc-srow .av { width: 36px; height: 36px; font-size: 12px; box-shadow: none; }
+.sc-cls { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.ctag { padding: 3px 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); font: 600 11.5px/1.2 var(--mono); color: var(--ink-2); white-space: nowrap; }
+.sc-tag { display: grid; place-items: center; color: var(--line-2); }
+.sc-tag.on { color: var(--p); }
+.sc-tag .ic { width: 17px; height: 17px; }
+
+/* Drawers */
+.sc-phead { display: flex; align-items: center; gap: 10px; }
+.sc-phead .pnum { width: 32px; height: 32px; border-radius: 8px; font-size: 12px; grid-row: auto; }
+.sc-ptitle { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sc-ptitle b { font-size: 15px; }
+.sc-ptitle span { font-size: 12.5px; color: var(--muted); }
+.sc-per .bar { height: 7px; }
+.sc-per .legend { justify-content: flex-start; gap: 4px 14px; }
+.sc-per .lg { font-size: 12px; }
+.sc-rollbox summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); }
+.sc-roll { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.sc-roll li { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.sc-rname { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-roll time { font: 500 12px var(--mono); color: var(--muted); text-align: right; }
+.pill.e { color: var(--e); background: var(--e-soft); }
+.pill.u { color: var(--muted); background: var(--u-soft); }
+.sc-clist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sc-clist li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto 32px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.sc-clist .pnum { width: 30px; height: 30px; font-size: 12px; border-radius: 8px; grid-row: auto; }
+.sc-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--line); }
+.sc-card > .ic { width: 22px; height: 22px; color: var(--accent); }
+.sc-card > div { min-width: 0; display: flex; flex-direction: column; }
+.sc-card b { font-size: 15px; }
+.sc-card span { font-size: 13px; color: var(--muted); }
+.sc-invite { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--r); border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
+.sc-invite .sc-card { background: var(--surface); }
+.sc-setup { padding-top: 4px; }
+.sc-roles { display: flex; flex-direction: column; gap: 8px; }
+.sc-rolepick { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--line-2); cursor: pointer; }
+.sc-rolepick input { margin: 3px 0 0; accent-color: var(--accent); }
+.sc-rolepick span { display: flex; flex-direction: column; }
+.sc-rolepick b { font-size: 14px; }
+.sc-rolepick small { font-size: 12.5px; color: var(--muted); }
+.sc-rolepick:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.sc-auth { border-radius: var(--r-sm); white-space: normal; line-height: 1.4; }
+.sc-start { gap: 10px; }
+.field textarea.short { min-height: 96px; }
+
+/* Import */
+.drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 18px; border-radius: var(--r-lg); border: 2px dashed var(--line-2); background: var(--surface-2); text-align: center; cursor: pointer; transition: border-color .15s, background-color .15s; }
+.drop:hover, .drop.over, .drop:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+.drop .ic { width: 30px; height: 30px; color: var(--accent); }
+.drop b { font-size: 16px; }
+.drop span { font-size: 13px; color: var(--muted); max-width: 46ch; }
+.imp-map { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
+.imp-map .field > span { font-size: 12px; }
+.imp-map select { min-height: 36px; padding: 6px 8px; font-size: 13.5px; }
+.imp-one { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--line); }
+.imp-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.imp-sum > div { padding: 10px 12px; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+.imp-sum > div:last-child { border-right: 0; }
+.imp-sum b { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.imp-sum span { font-size: 12px; color: var(--muted); }
+.imp-sum .warn b { color: var(--t); }
+.imp-teachers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.imp-teachers li { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.imp-teachers span { color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+.imp-probs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.imp-probs span { color: var(--muted); white-space: nowrap; }
+.imp-prev { overflow-x: auto; }
+.imp-prev table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.imp-prev th { text-align: left; font: 700 11px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.imp-prev td { padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.imp-prev .m-text { margin-top: 6px; }
+.imp-skip { color: var(--t); font-weight: 600; white-space: normal; }
+
+/* Sign-in: who's signing up */
+.seg.block { display: flex; width: 100%; }
+.seg.block button { flex: 1; padding: 8px 10px; }
+.au-role small { font-size: 12.5px; }
+.af-office { margin: 0; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; color: var(--muted); }
+.af-office .ic { width: 16px; height: 16px; }
+
+@media (max-width: 1180px) {
+  .sc-trow { grid-template-columns: 40px minmax(0, 1fr) minmax(130px, 200px) auto; }
+}
+@media (max-width: 959px) {
+  .pitem.school { padding-right: 12px; }
+  .pitem.school .pmain { display: flex; }
+  .pitem.school .pcourse { font-size: 13px; }
+  .pitem.school .ptime { display: none; }
+}
+@media (max-width: 640px) {
+  .sc-trow { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px 10px; padding: 10px 12px; }
+  .sc-trow .av { width: 36px; height: 36px; }
+  .sc-trow .sc-meter { grid-column: 2 / -1; grid-row: 2; }
+  .sc-prow { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .sc-prow .sc-who > span, .sc-prow .sc-who b { white-space: normal; overflow-wrap: anywhere; }
+  .sc-prow .av { width: 34px; height: 34px; }
+  .sc-prow .sc-pact { grid-column: 2 / -1; justify-content: flex-start; }
+  .sc-srow { grid-template-columns: 34px minmax(0, 1fr) 20px; }
+  .sc-srow .sc-cls { grid-column: 2 / -1; grid-row: 2; }
+  .sc-srow .sc-tag { grid-column: 3; grid-row: 1; }
+  .imp-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .imp-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .imp-sum > div:nth-child(2) { border-right: 0; }
+  .imp-sum > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .sc-roll li { grid-template-columns: minmax(0, 1fr) auto 56px; }
+}
+
 </style>
 <script>window.__taprollCfg={loaded:false,missing:false,error:null};window.addEventListener('error',function(e){if(e&&/config\.js/.test(e.filename||''))window.__taprollCfg.error=String(e.message||'error').replace(/^Uncaught\s+/,'');});</script>
 <script src="config.js" onload="window.__taprollCfg.loaded=true" onerror="window.__taprollCfg.missing=true"></script>
@@ -1102,7 +1263,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     };
   }
 
-  var api = { generate: generate };
+  // The example bell schedule, shared with the example school's other teachers.
+  var api = { generate: generate, periods: PERIODS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TapRollDemo = api;
 })(typeof window !== 'undefined' ? window : this);
@@ -1112,6 +1274,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
 (() => {
   'use strict';
   const BUILD_TARGET = 'site';
+  const APP_URL = 'https://taprolleducation.com/app.html';
   /* ============================== Utilities ============================== */
   const $ = (s, el = document) => el.querySelector(s);
   const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -1189,7 +1352,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     key: '<circle cx="8" cy="15" r="3.5"/><path d="M10.5 12.5 19 4M16 7l2.5 2.5M14 9l2 2"/>',
     chevron: '<path d="M9 6.5l5.5 5.5L9 17.5"/>',
     users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.4c1.6.7 2.7 2.3 3 4.6"/>',
-    mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.2"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/>'
+    mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.2"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/>',
+    school: '<path d="M3.5 20h17"/><path d="M5.5 20v-9.2L12 6.5l6.5 4.3V20"/><path d="M10 20v-4.2h4V20"/><path d="M12 6.5V3.5h3.2"/><circle cx="12" cy="11.4" r="1.5"/>',
+    sheet: '<rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/>'
   };
   const ic = (name) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
   const LOGO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8l3.4 3.4 6-7.2"/><path d="M15.8 8.4a5 5 0 0 1 0 7.2"/><path d="M18.7 5.9a8.6 8.6 0 0 1 0 12.2"/></svg>';
@@ -1284,10 +1449,13 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const ui = {
     screen: 'boot', ready: false, view: 'overview', periodId: null, date: todayStr(),
     filter: 'all', search: '', scanning: false, kiosk: false, readOnly: false,
-    syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null, excuseFor: null, parentsOpen: false
+    syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null, excuseFor: null, parentsOpen: false,
+    // School office: the open tab, the student search, open drawers and dialogs
+    scTab: 'live', scSearch: '', scAll: false, scDrawer: null, scPanel: false, scInviteOpen: false, impOpen: false, hideInvite: false
   };
   // Who is signed in. kind: 'device' (account saved in this browser), 'cloud' (Firebase account) or 'demo' (example classroom).
-  const Session = { kind: null, user: null };
+  // office: signed up as a school admin or registrar (offer to set up or join a school once the app opens).
+  const Session = { kind: null, user: null, office: false };
   // mailVia: where parent emails open on this device (the default email app, Gmail or Outlook on the web).
   const prefs = { sound: true, tapAs: 'auto', mailVia: 'app' };
   const PKEY = 'taproll.prefs.v1';
@@ -1310,7 +1478,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     return out;
   }
   function normStudent(s) {
-    return {
+    const out = {
       id: String(s.id), first: String(s.first || '').trim().slice(0, 40), last: String(s.last || '').trim().slice(0, 40),
       periods: Array.isArray(s.periods) ? s.periods.filter((x) => typeof x === 'string') : [],
       token: typeof s.token === 'string' && s.token ? s.token : null,
@@ -1318,6 +1486,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       tagAt: Number(s.tagAt) || null,
       parents: Array.isArray(s.parents) ? parseEmails(s.parents.join(' ')).ok : []
     };
+    // sk: the school key a school office gave this student. It is also their school tag code (see Schools).
+    // Left out when there isn't one, so a teacher's own save never erases it.
+    if (typeof s.sk === 'string' && /^[a-z0-9]{6,40}$/.test(s.sk)) out.sk = s.sk;
+    return out;
   }
   function cleanMap(map, norm) {
     const out = {};
@@ -1452,6 +1624,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       this.loaded.settings = true;
       if (this.ws === null || (S.settings.ws || '') !== this.ws) this.switchWs(S.settings.ws || '');
       if (!snap.exists && !this.profileWritten && this.onNewProfile) { this.profileWritten = true; this.onNewProfile(); }
+      schoolSync();
       dataChanged();
     },
     // fresh: a brand-new workspace with nothing stored yet, so there is nothing to wait for.
@@ -1672,7 +1845,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     return false;
   }
   const uidIn = (list, code) => { const v = uidVariants(code); return list.some((u) => variantsMatch(uidVariants(u), v)); };
-  const findByToken = (token) => (token ? Object.values(S.students).find((s) => s.token === token) || null : null);
+  // A tag's code is matched first against tags linked in this class, then against school tag codes, so a tag written
+  // for a student in any of their classes at a school works in every one of them.
+  const findByToken = (token) => (token ? Object.values(S.students).find((s) => s.token === token) || Object.values(S.students).find((s) => s.sk === token) || null : null);
   const findByUid = (code) => (code ? Object.values(S.students).find((s) => uidIn(s.uids, code)) || null : null);
 
   function autoBase() { return !NFC.framed && location.protocol === 'https:' ? location.origin + location.pathname : ''; }
@@ -1904,6 +2079,11 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     if (!st && scan.token) st = findByToken(scan.token);
     if (!st && scan.serial) st = findByUid(scan.serial);
     if (!st && scan.uid) st = findByUid(scan.uid);
+    // A school tag tapped here for the first time: link it to this class too.
+    if (st && scan.token && !st.token && st.sk === scan.token && editable()) {
+      upsertStudent({ ...st, token: scan.token, tagAt: Date.now() });
+      st = S.students[st.id];
+    }
     // Remember a written tag's serial number so a USB reader recognizes the same tag later.
     if (st && scan.serial && scan.token && st.token === scan.token && !uidIn(st.uids, scan.serial) && editable()) {
       upsertStudent({ ...st, uids: [...st.uids, scan.serial] });
@@ -2078,7 +2258,13 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     if (ui.ready && !firstReadyDone) {
       firstReadyDone = true;
       pickInitialView();
-      setTimeout(() => { if (pendingTag) processPendingHash(); else maybeOfferImport(); }, 0);
+      maybeOpenOffice();
+      setTimeout(() => {
+        if (pendingTag) processPendingHash();
+        else if (Session.office && School.state === 'none' && !modal.open) { Session.office = false; openOfficeStart(); }
+        else if (pendingSchoolLink) applySchoolLink();
+        else maybeOfferImport();
+      }, 0);
     }
     if (ui.view === 'period' && ui.ready && !S.periods[ui.periodId]) { ui.view = 'overview'; ui.periodId = null; }
     scheduleRender();
@@ -2127,7 +2313,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const keepLeft = oldStrip ? oldStrip.scrollLeft : 0;
     const today = todayStr();
     const todayItem = `<li><button class="pitem today ${ui.view === 'overview' ? 'is-active' : ''}" data-act="open-overview" aria-current="${ui.view === 'overview' ? 'page' : 'false'}">`
-      + `<span class="pnum">${ic('grid')}</span><span class="pmain"><span class="pcourse">Today</span><span class="ptime">${esc(fmtDateShort(today))}</span></span><span class="pside"></span></button></li>`;
+      + `<span class="pnum">${ic('grid')}</span><span class="pmain"><span class="pcourse">${isStaff() ? 'My classes' : 'Today'}</span><span class="ptime">${esc(fmtDateShort(today))}</span></span><span class="pside"></span></button></li>`;
     const items = periodList().map((p) => {
       const c = countsOf(today, p.id);
       const ph = phaseOf(p, today);
@@ -2140,7 +2326,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     }).join('');
     rail.innerHTML = `${brand}<nav class="schedule" aria-label="Periods">`
       + `<div class="sched-head"><span class="sched-label">Bell schedule</span><span class="sched-clock">${esc(fmtClock(Date.now()))}</span></div>`
-      + `<ol class="plist">${todayItem}${items}</ol>`
+      + `<ol class="plist">${schoolRailItem()}${todayItem}${items}</ol>`
       + `${editable() ? `<button class="addp" data-act="add-period">${ic('plus')} Add period</button>` : ''}</nav>`
       + `<div class="rail-foot"><button class="rail-link" data-act="tag-tools">${ic('tag')} Tag tools</button>`
       + `<button class="rail-link" data-act="settings">${ic('sliders')} Settings</button>`
@@ -2151,7 +2337,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const strip = rail.querySelector('.schedule');
     if (strip) {
       strip.scrollLeft = keepLeft;
-      const key = ui.view === 'period' ? ui.periodId : 'overview';
+      const key = ui.view === 'period' ? ui.periodId : ui.view;
       const act = rail.querySelector('.pitem.is-active');
       if (act && key !== lastChip && strip.scrollWidth > strip.clientWidth) {
         const delta = act.getBoundingClientRect().left - strip.getBoundingClientRect().left;
@@ -2184,8 +2370,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const active = document.activeElement;
     const keep = active && active.id && main.contains(active) ? { id: active.id, s: active.selectionStart, e: active.selectionEnd } : null;
     let html;
+    if (ui.view === 'school' && !isStaff()) ui.view = 'overview';
     if (!ui.ready) html = viewLoading();
     else if (ui.view === 'period' && S.periods[ui.periodId]) html = viewPeriod(S.periods[ui.periodId]);
+    else if (ui.view === 'school') html = viewSchool();
     else html = viewOverview();
     main.innerHTML = `<div class="wrap">${html}</div>`;
     if (keep) {
@@ -2210,6 +2398,11 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     } else if (ui.syncError) {
       out += `<div class="banner warn">${ic('alert')}<p><b>Live sync stopped.</b> Check your connection, then reload the page.</p><button class="btn sm" data-act="reload">Reload</button></div>`;
     } else if (ui.readOnly) out += `<div class="banner warn">${ic('alert')}<p>You can view these classes, but changes aren’t being saved.</p></div>`;
+    if (School.invite && School.state !== 'member' && !ui.hideInvite) {
+      const inv = School.invite;
+      out += `<div class="banner">${ic('school')}<p><b>${esc(inv.school || 'Your school')} invited you to join as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}.</b> ${inv.role === 'teacher' ? 'The school office will see your classes and can add students to them.' : 'You’ll see attendance for every class.'}</p>`
+        + `<button class="btn sm primary" data-act="sc-panel">Review invite</button><button class="btn sm ghost" data-act="hide-invite">Not now</button></div>`;
+    }
     if (Session.kind === 'demo' && !ui.hideSample) {
       out += `<div class="banner">${ic('spark')}<p><b>You’re exploring an example classroom.</b> The students are made up, and changes stay on this device.</p>`
         + `<button class="btn sm primary" data-act="demo-signup">Create your account</button><button class="btn sm ghost" data-act="hide-sample">Keep exploring</button></div>`;
@@ -2752,7 +2945,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const can = editable();
     const tagLine = hasTag ? `Tag linked${st.tagAt ? ` · ${fmtDay(dateStr(new Date(st.tagAt)))}` : ''}` : 'No tag yet';
     const tagDetail = [st.token ? `Tag code ${st.token}` : '', st.uids.length ? `Reader ID ${st.uids.join(', ')}` : ''].filter(Boolean).join(' · ');
-    const payload = st.token ? tagPayload(st.token).text : '';
+    const payload = st.token || st.sk ? tagPayload(st.token || st.sk).text : '';
     const hist = periods.map((p) => {
       const h = studentHistory(st, p.id);
       const marked = h.P + h.T + h.A + h.E;
@@ -2769,7 +2962,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + `${can ? `<div class="row"><button class="btn primary" data-act="write-tag" data-id="${esc(st.id)}" ${nfc.ok ? '' : 'disabled'}>${ic('nfc')} ${hasTag ? 'Write a new tag' : 'Write tag'}</button>`
         + `<button class="btn" data-act="link-tag" data-id="${esc(st.id)}">${ic('link')} Link existing tag</button>`
         + `${hasTag ? `<button class="btn ghost danger" data-act="unlink-tag" data-id="${esc(st.id)}">Remove tag</button>` : ''}</div>`
-        + `<p class="m-text small">Already has a TapRoll tag from another class? Choose <b>Link existing tag</b> so one tag works in both classes.</p>` : ''}`
+        + (st.sk ? `<p class="m-text small">${esc(st.first || 'This student')}’s school office added them, so a tag written in any of their classes at your school works here too, and a tag written here works there.</p>`
+          : `<p class="m-text small">Already has a TapRoll tag from another class? Choose <b>Link existing tag</b> so one tag works in both classes.</p>`) : ''}`
       + `${nfc.ok ? '' : `<p class="m-text small">${esc(nfc.title)}. ${esc(nfc.detail)}</p>`}`
       + `${can ? `<details class="tip"><summary>Write the tag with another app instead</summary><p class="m-text small">Any NFC writer app (NFC Tools works on iPhone and Android) can write this ${tagPayload('x').kind === 'link' ? 'link' : 'text'} to an NTAG sticker or card. TapRoll recognizes the tag once it’s written.</p>`
         + `<div class="payload"><code id="payload-code">${payload ? esc(payload) : 'A code is created when you copy.'}</code><button class="btn sm" data-act="copy-payload" data-id="${esc(st.id)}">${ic('copy')} Copy</button></div></details>` : ''}`
@@ -2831,7 +3025,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   }
   // Other students in your classes who have this tag now, matched by its TapRoll code or its reader ID.
   function tagOwners(sid, token, code) {
-    return Object.values(S.students).filter((o) => o.id !== sid && ((token && o.token === token) || (code && uidIn(o.uids, code))));
+    const me = S.students[sid];
+    return Object.values(S.students).filter((o) => o.id !== sid && ((token && (o.token === token || (o.sk === token && !(me && me.sk === token)))) || (code && uidIn(o.uids, code))));
   }
   const namesOf = (list) => list.map(fullName).join(' and ');
   function takeWarning(owners, ifClause) {
@@ -2851,7 +3046,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const st = S.students[sid];
     if (!st || !editable()) return;
     primeAudio();
-    const token = rid(12);
+    // A student a school office added keeps their school tag code, so this one tag checks them in to all of
+    // their classes at the school. Anyone else gets a fresh code.
+    const token = st.sk || rid(12);
     opStatus('wait', confirmed ? `Hold the same tag to the back of the phone again to write ${st.first || 'this student'}’s tag…` : `Hold a blank or old tag to the back of the phone to write ${st.first || 'this student'}’s tag…`, true);
     const sameTag = (serial, before) => !!confirmed && (confirmed.serial ? confirmed.serial === serial : (!!confirmed.token && !!before && before.token === confirmed.token));
     try {
@@ -2882,8 +3079,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       changes.push({ ...fresh, token, uids: res.serial ? [res.serial] : [], tagAt: Date.now() });
       upsertStudents(changes);
       refreshStudent();
-      const foreign = !!(res.before && res.before.token) && !prevOwner && fresh.token !== res.before.token;
-      opStatus('ok', `Tag written for ${fullName(fresh)}.${prevOwner ? ` It used to be ${fullName(prevOwner)}’s tag, so ${prevOwner.first || 'they'} will need a new one.` : ''}${foreign ? ' This tag was set up for another class before, so that class needs to link it again.' : ''}`);
+      const foreign = !!(res.before && res.before.token) && !prevOwner && res.before.token !== token && fresh.token !== res.before.token;
+      opStatus('ok', `Tag written for ${fullName(fresh)}.${prevOwner ? ` It used to be ${fullName(prevOwner)}’s tag, so ${prevOwner.first || 'they'} will need a new one.` : ''}${fresh.sk ? ` It works in all of ${fresh.first || 'their'}${fresh.first ? '’s' : ''} classes at your school.` : ''}${foreign && !fresh.sk ? ' This tag was set up for another class before, so that class needs to link it again.' : ''}`);
       beep('present'); buzz('present');
       scheduleRender();
     } catch (err) {
@@ -2974,7 +3171,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   async function copyPayload(sid) {
     let st = S.students[sid];
     if (!st || !editable()) return;
-    if (!st.token) { upsertStudent({ ...st, token: rid(12), tagAt: Date.now() }); st = S.students[sid]; }
+    if (!st.token) { upsertStudent({ ...st, token: st.sk || rid(12), tagAt: Date.now() }); st = S.students[sid]; }
     const text = tagPayload(st.token).text;
     const code = $('#payload-code');
     if (code) code.textContent = text;
@@ -3096,13 +3293,14 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + accountSection()
       + `<section class="dsec"><h3>Classroom</h3><form id="settings-form" class="m-body"><div class="grid2">`
       + `<label class="field"><span>Your name</span><input id="set-teacher" maxlength="60" autocomplete="name" value="${esc(S.settings.teacher)}" placeholder="Ms. Rivera" ${can ? '' : 'disabled'}></label>`
-      + `<label class="field"><span>School</span><input id="set-school" maxlength="60" autocomplete="organization" value="${esc(S.settings.school)}" placeholder="Harbor View High" ${can ? '' : 'disabled'}></label></div>`
+      + `<label class="field"><span>School</span><input id="set-school" maxlength="60" autocomplete="organization" value="${esc(S.settings.school)}" placeholder="Harbor View High" ${can && !(School.state === 'member' && Session.kind === 'cloud') ? '' : 'disabled'}>${School.state === 'member' && Session.kind === 'cloud' ? `<small>Set by ${esc(School.name || 'your school')}.</small>` : ''}</label></div>`
       + `<p class="m-text small">Passing time and tardy grace are set for each period. To change them, open a period and select the pencil button next to its name.</p>`
       + `<label class="field"><span>Hosted site link</span><input id="set-base" type="url" inputmode="url" placeholder="${esc(auto || 'https://yourname.github.io/taproll/')}" value="${esc(S.settings.tagBase)}" ${can ? '' : 'disabled'}>`
       + `<small>Tags you write open this address when tapped on a phone. ${auto ? 'Leave it blank to use this page’s address.' : 'Leave it blank to write plain tag codes.'}</small></label>`
       + `<label class="check fit"><input type="checkbox" id="set-sound" ${prefs.sound ? 'checked' : ''}> Beep on each scan (this device)</label>`
       + `<p class="m-text small" id="set-err" hidden></p>`
       + `<div class="m-foot"><button type="submit" class="btn primary">Save settings</button></div></form></section>`
+      + schoolSettingsSection()
       + `<section class="dsec"><h3>Parent emails</h3><p class="m-text small">When a student is absent or tardy, TapRoll writes the email to their parent. It opens in your own email so you can check it and send it. Add parent emails in each student’s details.</p>`
       + `<div class="field"><span>Open emails in (this device)</span>${viaSeg()}</div></section>`
       + `<section class="dsec"><h3>Data</h3><p class="m-text small">${esc(storageText())}</p>`
@@ -3122,8 +3320,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         const base = $('#set-base').value.trim();
         const err = $('#set-err');
         if (base && !/^https:\/\/\S+$/i.test(base)) { err.textContent = 'The hosted site link has to start with https://'; err.hidden = false; return; }
-        const teacher = $('#set-teacher').value.trim(), school = $('#set-school').value.trim();
+        const teacher = $('#set-teacher').value.trim();
+        const school = School.state === 'member' && Session.kind === 'cloud' && School.name ? School.name : $('#set-school').value.trim();
         setSettings({ school, teacher, tagBase: base });
+        if (School.kind === 'demo' && school) School.name = school;
         saveAccountProfile(teacher, school);
       }
       closeModal();
@@ -3251,7 +3451,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     window.scrollTo({ top: 0 });
   }
   function pickInitialView() {
-    if (ui.view === 'period' && S.periods[ui.periodId]) return;
+    if ((ui.view === 'period' && S.periods[ui.periodId]) || ui.view === 'school') return;
     const cur = currentPeriod();
     if (cur) { ui.view = 'period'; ui.periodId = cur.id; ui.date = todayStr(); }
     else { ui.view = 'overview'; ui.periodId = null; }
@@ -3341,24 +3541,37 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       case 'auth-google': signInGoogle(); break;
       case 'auth-demo': startDemo(true); break;
       case 'toggle-pw': togglePassword(el); break;
-      default: break;
+      case 'au-role': setAuthRole(el.dataset.v); break;
+      case 'open-school': openSchoolView(); break;
+      case 'hide-invite': ui.hideInvite = true; scheduleRender(); break;
+      default: if (act.startsWith('sc-')) schoolAct(act, el); break;
     }
   }
   function onInput(e) {
     if (e.target && e.target.id === 'roster-search') { ui.search = e.target.value; scheduleRender(); }
+    if (e.target && e.target.id === 'sc-search') { ui.scSearch = e.target.value; ui.scAll = false; scheduleRender(); }
   }
 
   /* ============================== Tag links (#tag-xxxx) and home page links ============================== */
   let pendingTag = null;
   // The home page links to app.html#signup (sign-up form) and app.html#example (example classroom).
   let pendingAuthView = null;
+  // School invites link to app.html#school: after sign-in, it opens the School office or the invite.
+  let pendingSchoolLink = false;
   function readHashTag() { const m = /^#tag-([a-z0-9]{6,40})$/i.exec(location.hash || ''); return m ? m[1].toLowerCase() : null; }
   function clearHash() { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* not allowed here */ } }
   function captureHash() {
     const t = readHashTag();
     if (t) { pendingTag = t; clearHash(); return; }
+    if (/^#school$/i.test(location.hash || '')) { pendingSchoolLink = true; clearHash(); return; }
     const v = /^#(signin|signup|example)$/i.exec(location.hash || '');
     if (v) { pendingAuthView = v[1].toLowerCase(); clearHash(); }
+  }
+  // A school link opened while signed in.
+  function applySchoolLink() {
+    if (!pendingSchoolLink || ui.screen !== 'app' || !ui.ready) return;
+    if (isStaff()) { pendingSchoolLink = false; openSchoolView(); return; }
+    if (School.kind === 'cloud' && School.state !== 'loading') { pendingSchoolLink = false; openSchoolPanel(); }
   }
   // A home page link followed while this page is already open on the sign-in screen.
   function applyAuthLink() {
@@ -3392,14 +3605,1770 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     window.addEventListener('pagehide', () => Store.flushLocal());
     window.addEventListener('hashchange', () => {
       captureHash();
-      if (ui.screen === 'auth') { if (pendingAuthView) applyAuthLink(); else renderAuth(); } else { pendingAuthView = null; processPendingHash(); }
+      if (ui.screen === 'auth') { if (pendingAuthView) applyAuthLink(); else renderAuth(); } else { pendingAuthView = null; processPendingHash(); applySchoolLink(); }
     });
     window.addEventListener('online', setSyncState);
     window.addEventListener('offline', setSyncState);
     Wedge.init();
     captureHash();
     boot();
-    setInterval(() => { if (ui.screen === 'app' && (!modal.open || !ui.openStudent)) scheduleRender(); }, 30000);
+    setInterval(() => {
+      if (ui.screen !== 'app') return;
+      schoolTick();
+      if (!modal.open || !ui.openStudent) scheduleRender();
+      if (modal.open && ui.scDrawer) refreshScDrawer();
+    }, 30000);
+  }
+
+  /* ============================== Spreadsheets ==============================
+     Reads Excel workbooks (.xlsx) and CSV or tab-separated text in the browser, with no library.
+     An .xlsx file is a zip of XML files: the zip is unpacked with the browser's DecompressionStream and the
+     sheets are read with DOMParser. Every cell comes back as trimmed text. Old binary .xls files aren't supported. */
+  const SHEET_MAX_ROWS = 20000, SHEET_MAX_COLS = 60;
+  const sheetErr = (code) => Object.assign(new Error(code), { code });
+
+  async function readSpreadsheet(file) {
+    const name = String((file && file.name) || '').toLowerCase();
+    if (file.size > 25 * 1024 * 1024) throw sheetErr('too-big');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b) return readXlsx(bytes);   // "PK": a zip, so an Excel workbook
+    if (/\.(xls|numbers|ods)$/.test(name) || (bytes[0] === 0xd0 && bytes[1] === 0xcf)) throw sheetErr('format');
+    if (/\.xlsx$/.test(name)) throw sheetErr('format');
+    return [{ name: file.name || 'Sheet', rows: parseDelimited(decodeText(bytes)) }];
+  }
+
+  function decodeText(bytes) {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^﻿/, ''); }
+    catch (e) { return new TextDecoder('windows-1252').decode(bytes); }
+  }
+
+  // CSV, semicolon or tab separated text (what Excel puts on the clipboard), with quoted fields.
+  function parseDelimited(text) {
+    text = String(text || '').replace(/\r\n?/g, '\n');
+    const sample = text.split('\n').slice(0, 8).join('\n').replace(/"[^"]*"/g, '');
+    const count = (ch) => sample.split(ch).length - 1;
+    const tabs = count('\t'), commas = count(','), semis = count(';');
+    const sep = tabs && tabs >= commas / 2 ? '\t' : (semis > commas ? ';' : ',');
+    const rows = [];
+    let row = [], cell = '', quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (quoted) {
+        if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else quoted = false; }
+        else cell += ch;
+      } else if (ch === '"' && cell.trim() === '') { quoted = true; cell = ''; }
+      else if (ch === sep) { row.push(cell.trim()); cell = ''; }
+      else if (ch === '\n') { row.push(cell.trim()); rows.push(row); row = []; cell = ''; if (rows.length >= SHEET_MAX_ROWS) break; }
+      else cell += ch;
+    }
+    if (cell !== '' || row.length) { row.push(cell.trim()); rows.push(row); }
+    return rows.map((r) => r.slice(0, SHEET_MAX_COLS)).filter((r) => r.some((c) => c !== ''));
+  }
+
+  /* ----- .xlsx ----- */
+  function zipIndex(bytes) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let eocd = -1;
+    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw sheetErr('format');
+    const total = dv.getUint16(eocd + 10, true);
+    let p = dv.getUint32(eocd + 16, true);
+    const out = new Map();
+    const dec = new TextDecoder();
+    for (let n = 0; n < total && p + 46 <= bytes.length; n++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) break;
+      const method = dv.getUint16(p + 10, true);
+      const size = dv.getUint32(p + 20, true);
+      const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), commentLen = dv.getUint16(p + 32, true);
+      const local = dv.getUint32(p + 42, true);
+      const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+      out.set(name.replace(/\\/g, '/'), { method, size, local });
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+    return out;
+  }
+  async function unzipEntry(bytes, entry) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (dv.getUint32(entry.local, true) !== 0x04034b50) throw sheetErr('format');
+    const start = entry.local + 30 + dv.getUint16(entry.local + 26, true) + dv.getUint16(entry.local + 28, true);
+    const data = bytes.subarray(start, start + entry.size);
+    if (entry.method === 0) return data;
+    if (entry.method !== 8) throw sheetErr('format');
+    if (typeof DecompressionStream !== 'function') throw sheetErr('browser');
+    const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  const xmlAll = (node, tag) => Array.from(node.getElementsByTagNameNS('*', tag));
+  function parseXml(text) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) throw sheetErr('format');
+    return doc;
+  }
+  // The text of a shared or inline string: its runs, without the phonetic guides some Japanese files add.
+  const runText = (node) => xmlAll(node, 't').filter((t) => !(t.parentNode && t.parentNode.localName === 'rPh')).map((t) => t.textContent).join('');
+  function colIndex(ref) {
+    const m = /^([A-Z]+)/i.exec(ref || '');
+    if (!m) return -1;
+    let n = 0;
+    for (const ch of m[1].toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
+    return n - 1;
+  }
+  function cellText(c, shared) {
+    const t = c.getAttribute('t') || 'n';
+    const v = xmlAll(c, 'v')[0];
+    const raw = v ? v.textContent : '';
+    if (t === 's') return shared[Number(raw)] || '';
+    if (t === 'inlineStr') { const is = xmlAll(c, 'is')[0]; return is ? runText(is) : ''; }
+    if (t === 'b') return raw === '1' ? 'TRUE' : 'FALSE';
+    if (t === 'e') return '';
+    if (t === 'n' && /^-?\d+(\.\d+)?(e[-+]?\d+)?$/i.test(raw)) {
+      const num = Number(raw);
+      return Number.isInteger(num) ? String(num) : String(Math.round(num * 1e9) / 1e9);
+    }
+    return raw;
+  }
+  async function readXlsx(bytes) {
+    const zip = zipIndex(bytes);
+    const text = async (path) => { const e = zip.get(path); return e ? new TextDecoder().decode(await unzipEntry(bytes, e)) : null; };
+    const wbText = await text('xl/workbook.xml');
+    if (!wbText) throw sheetErr('format');
+    const wb = parseXml(wbText);
+    const rels = {};
+    const relText = await text('xl/_rels/workbook.xml.rels');
+    if (relText) {
+      for (const r of xmlAll(parseXml(relText), 'Relationship')) {
+        const target = String(r.getAttribute('Target') || '');
+        rels[r.getAttribute('Id')] = target.startsWith('/') ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+      }
+    }
+    const shared = [];
+    const ssText = await text('xl/sharedStrings.xml');
+    if (ssText) for (const si of xmlAll(parseXml(ssText), 'si')) shared.push(runText(si));
+    const REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const sheets = [];
+    const list = xmlAll(wb, 'sheet');
+    for (let i = 0; i < list.length; i++) {
+      const el = list[i];
+      const rid = el.getAttributeNS(REL_NS, 'id') || el.getAttribute('r:id');
+      const path = rels[rid] || `xl/worksheets/sheet${i + 1}.xml`;
+      const xml = await text(path);
+      if (!xml) continue;
+      const rows = [];
+      let next = 0;
+      for (const r of xmlAll(parseXml(xml), 'row')) {
+        const at = Number(r.getAttribute('r'));
+        const ri = Number.isFinite(at) && at > 0 ? at - 1 : next;
+        next = ri + 1;
+        if (ri >= SHEET_MAX_ROWS) break;
+        const row = [];
+        let ci = 0;
+        for (const c of xmlAll(r, 'c')) {
+          const ref = colIndex(c.getAttribute('r'));
+          if (ref >= 0) ci = ref;
+          if (ci < SHEET_MAX_COLS) row[ci] = String(cellText(c, shared)).trim();
+          ci++;
+        }
+        for (let k = 0; k < row.length; k++) if (row[k] === undefined) row[k] = '';
+        rows[ri] = row;
+      }
+      sheets.push({ name: el.getAttribute('name') || `Sheet ${i + 1}`, rows: rows.filter((row) => row && row.some((c) => c !== '')) });
+    }
+    if (!sheets.length) throw sheetErr('format');
+    return sheets;
+  }
+  function sheetErrorText(err) {
+    const code = err && err.code;
+    if (code === 'format') return 'TapRoll can read Excel workbooks (.xlsx) and CSV files. Save the sheet as one of those and try again.';
+    if (code === 'browser') return 'This browser can’t open Excel files. Save the sheet as CSV, or copy the cells and paste them here.';
+    if (code === 'too-big') return 'That file is bigger than 25 MB. Save just the sheet with the class lists and try again.';
+    return 'TapRoll couldn’t read that file. Save it as .xlsx or CSV and try again.';
+  }
+
+  /* ============================== Schools ==============================
+     A school links teachers so its admins and registrars can watch attendance in every class as it happens and put
+     students in teachers' classes. It needs cloud accounts. The example classroom belongs to a made-up school so
+     the School office can be explored without one. In Firestore:
+       schools/<sid>                     { name, owner, createdAt }            owner: whoever set it up (always an admin)
+       schools/<sid>/members/<uid>       { role, name, email, at }             role: admin | registrar | teacher
+       schools/<sid>/invites/<email>     { email, role, byName, byEmail, at }  pending invites, for the school's own list
+       invites/<email>                   { sid, school, role, byName, byEmail, at }   so the invited person finds theirs
+       teachers/<uid>.schoolId           set by the teacher when they join; it's their consent to the school's access
+     A teacher's classes stay in their own space (teachers/<uid>/...). The Firestore rules let the school's admins and
+     registrars read them, and change class rosters, only while the teacher is a member and has schoolId set.
+     Students a school office adds get a school key (sk). It is also their school tag code, so one tag written in any
+     class checks the student in to all of their classes. */
+  const ROLE_LABEL = { admin: 'Admin', registrar: 'Registrar', teacher: 'Teacher' };
+  const ROLE_NOTE = {
+    admin: 'Sees every class, adds students, and invites or removes anyone.',
+    registrar: 'Sees every class, adds students, and invites teachers.',
+    teacher: 'Takes attendance in their own classes.'
+  };
+  const isStaffRole = (r) => r === 'admin' || r === 'registrar';
+  const emailKey = (e) => String(e || '').trim().toLowerCase();
+  const offSub = (u) => { if (typeof u === 'function') { try { u(); } catch (e) { /* already closed */ } } };
+  const normKey = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const nameKey = (first, last) => normKey(`${first} ${last}`);
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+  const fmtCount = (n) => Number(n || 0).toLocaleString();
+
+  const School = {
+    kind: null, me: null,
+    sid: '', name: '', owner: '', role: null, state: 'off', error: null,
+    invite: null, inviteState: 'idle',
+    members: {}, invites: {}, membersLoaded: false,
+    t: {}, date: todayStr(),
+    subs: [], staffSubs: [], tSubs: {}, watching: false, autoOpened: false, verifySent: false, busy: false
+  };
+  const isStaff = () => School.state === 'member' && isStaffRole(School.role);
+  const isAdmin = () => School.state === 'member' && School.role === 'admin';
+  const meUid = () => (School.me ? School.me.uid : '');
+
+  function schoolStop() {
+    School.subs.forEach(offSub); School.staffSubs.forEach(offSub);
+    Object.keys(School.tSubs).forEach(unwatchTeacher);
+    Object.assign(School, {
+      kind: null, me: null, sid: '', name: '', owner: '', role: null, state: 'off', error: null, invite: null, inviteState: 'idle',
+      members: {}, invites: {}, membersLoaded: false, t: {}, date: todayStr(), subs: [], staffSubs: [], tSubs: {},
+      watching: false, autoOpened: false, verifySent: false, busy: false
+    });
+    ui.scTab = 'live'; ui.scSearch = ''; ui.scAll = false; ui.scDrawer = null; ui.scPanel = false; ui.hideInvite = false;
+  }
+  function schoolChanged() {
+    scheduleRender();
+    if (modal.open && ui.scDrawer) refreshScDrawer();
+    if (modal.open && ui.scPanel) refreshSchoolPanel();
+    const sec = $('#school-sec');
+    if (sec) sec.innerHTML = schoolSectionInner();
+  }
+
+  /* ----- Cloud ----- */
+  function schoolStartCloud(user) {
+    schoolStop();
+    School.kind = 'cloud';
+    const provider = ((user.providerData || [])[0] || {}).providerId || 'password';
+    School.me = { uid: user.uid, email: emailKey(user.email), name: user.displayName || '', verified: !!user.emailVerified, provider };
+    School.state = 'none';
+    checkInvite();
+  }
+  // Each account can have one pending invite at a time, stored under its email address. Reading it needs a
+  // confirmed email, so an invite can't be picked up by someone who only typed that address.
+  async function checkInvite() {
+    if (School.kind !== 'cloud' || !School.me || !School.me.email || !Cloud.fs) return;
+    if (!School.me.verified) { School.invite = null; School.inviteState = 'unverified'; schoolChanged(); return; }
+    School.inviteState = 'checking';
+    try {
+      const snap = await Cloud.fs.doc(`invites/${School.me.email}`).get();
+      const inv = snap.exists ? { ...(snap.data() || {}), email: School.me.email } : null;
+      School.invite = inv && inv.sid && ROLE_LABEL[inv.role] && !(School.state === 'member' && inv.sid === School.sid) ? inv : null;
+      School.inviteState = School.invite ? 'found' : 'none';
+    } catch (e) {
+      School.invite = null;
+      School.inviteState = String((e && e.code) || '').includes('permission-denied') ? 'denied' : 'error';
+    }
+    schoolChanged();
+  }
+  // Called whenever the teacher's profile changes. schoolId says which school they've joined.
+  function schoolSync() {
+    if (School.kind !== 'cloud' || !Store.loaded.settings) return;
+    const sid = String(S.settings.schoolId || '');
+    if (sid !== School.sid) schoolAttach(sid);
+  }
+  function schoolAttach(sid) {
+    School.subs.forEach(offSub); School.subs = [];
+    stopStaff();
+    Object.assign(School, { sid, name: '', owner: '', role: null, members: {}, invites: {}, membersLoaded: false, error: null });
+    if (!sid) { School.state = 'none'; schoolChanged(); return; }
+    School.state = 'loading';
+    const fs = Cloud.fs, me = meUid();
+    School.subs.push(fs.doc(`schools/${sid}/members/${me}`).onSnapshot((snap) => {
+      if (School.sid !== sid) return;
+      if (!snap.exists) {
+        if (snap.metadata && snap.metadata.fromCache) return;   // a new device: wait for the server's answer
+        schoolLost();
+        return;
+      }
+      const m = snap.data() || {};
+      School.role = ROLE_LABEL[m.role] ? m.role : 'teacher';
+      School.state = 'member';
+      if (isStaffRole(School.role)) startStaff(); else stopStaff();
+      if (School.invite && School.invite.sid === sid) { School.invite = null; School.inviteState = 'none'; }
+      maybeOpenOffice();
+      applySchoolLink();
+      schoolChanged();
+    }, (e) => {
+      if (School.sid !== sid) return;
+      School.state = 'error'; School.error = String((e && e.code) || 'unknown');
+      schoolChanged();
+    }));
+    School.subs.push(fs.doc(`schools/${sid}`).onSnapshot((snap) => {
+      if (School.sid !== sid) return;
+      const d = snap.exists ? (snap.data() || {}) : {};
+      School.name = String(d.name || '');
+      School.owner = String(d.owner || '');
+      // The school's own name appears on the teacher's rail and in emails to parents.
+      if (School.name && S.settings.school !== School.name && editable()) setSettings({ school: School.name });
+      schoolChanged();
+    }, () => { /* only members can read it */ }));
+  }
+  // The teacher was removed from the school (or left on another device).
+  function schoolLost() {
+    const name = School.name;
+    School.state = 'none'; School.role = null;
+    stopStaff();
+    if (editable()) setSettings({ schoolId: '' });
+    if (ui.view === 'school') { ui.view = 'overview'; ui.periodId = null; }
+    toast({ kind: 'info', text: name ? `You’re no longer part of ${name}` : 'You’re no longer part of a school', sub: 'Your classes stay in your account.' });
+    schoolChanged();
+  }
+
+  // Admins and registrars watch every member's classes live.
+  function startStaff() {
+    if (School.watching) return;
+    School.watching = true;
+    School.error = null;
+    if (School.kind !== 'cloud') return;
+    const fs = Cloud.fs, sid = School.sid;
+    const failed = (e) => { console.warn('TapRoll: school sync stopped', e); School.error = String((e && e.code) || 'unknown'); schoolChanged(); };
+    School.staffSubs.push(fs.collection(`schools/${sid}/members`).onSnapshot((qs) => {
+      if (School.sid !== sid) return;
+      const next = {};
+      qs.docs.forEach((d) => { next[d.id] = d.data() || {}; });
+      School.members = next; School.membersLoaded = true;
+      Object.keys(next).forEach(watchTeacher);
+      Object.keys(School.tSubs).forEach((uid) => { if (!next[uid]) unwatchTeacher(uid); });
+      schoolChanged();
+    }, failed));
+    School.staffSubs.push(fs.collection(`schools/${sid}/invites`).onSnapshot((qs) => {
+      if (School.sid !== sid) return;
+      const next = {};
+      qs.docs.forEach((d) => { next[d.id] = d.data() || {}; });
+      School.invites = next;
+      schoolChanged();
+    }, failed));
+  }
+  function stopStaff() {
+    School.staffSubs.forEach(offSub); School.staffSubs = [];
+    if (School.state === 'member') School.error = null;
+    Object.keys(School.tSubs).forEach(unwatchTeacher);
+    if (School.kind === 'cloud') School.t = {};
+    School.watching = false;
+  }
+  function watchTeacher(uid) {
+    if (School.kind !== 'cloud' || uid === meUid() || School.tSubs[uid]) return;
+    const fs = Cloud.fs;
+    const t = { uid, profile: null, ws: null, periods: {}, students: {}, day: {}, got: {}, status: 'loading' };
+    School.t[uid] = t;
+    const subs = { main: [], ws: [], day: null };
+    School.tSubs[uid] = subs;
+    const fail = (e) => { t.status = String((e && e.code) || '').includes('permission-denied') ? 'denied' : 'error'; schoolChanged(); };
+    subs.main.push(fs.doc(`teachers/${uid}`).onSnapshot((snap) => {
+      t.profile = snap.exists ? (snap.data() || {}) : {};
+      const ws = String(t.profile.ws || '');
+      if (ws !== t.ws) {
+        subs.ws.forEach(offSub); subs.ws = []; offSub(subs.day); subs.day = null;
+        Object.assign(t, { ws, periods: {}, students: {}, day: {}, got: {} });
+        if (ws) {
+          const base = `teachers/${uid}/ws/${ws}`;
+          subs.ws.push(fs.doc(`${base}/meta/periods`).onSnapshot((s) => { if (t.ws !== ws) return; t.periods = cleanMap(s.exists ? (s.data() || {}).periods : null, normPeriod); t.got.periods = true; tReady(t); }, fail));
+          subs.ws.push(fs.doc(`${base}/meta/roster`).onSnapshot((s) => { if (t.ws !== ws) return; t.students = cleanMap(s.exists ? (s.data() || {}).students : null, normStudent); t.got.roster = true; tReady(t); }, fail));
+          watchDay(uid);
+        }
+      }
+      if (!ws) t.status = 'ready';
+      schoolChanged();
+    }, fail));
+  }
+  function watchDay(uid) {
+    const t = School.t[uid], subs = School.tSubs[uid];
+    if (!t || !subs || !t.ws) return;
+    offSub(subs.day);
+    const date = School.date, ws = t.ws;
+    t.got.day = false; t.day = {};
+    subs.day = Cloud.fs.doc(`teachers/${uid}/ws/${ws}/days/${date}`).onSnapshot((s) => {
+      if (School.date !== date || t.ws !== ws) return;
+      t.day = cleanDay(s.exists ? (s.data() || {}).periods : null); t.got.day = true; tReady(t);
+    }, (e) => { t.status = String((e && e.code) || '').includes('permission-denied') ? 'denied' : 'error'; schoolChanged(); });
+  }
+  function tReady(t) { if (t.got.periods && t.got.roster && t.got.day) t.status = 'ready'; schoolChanged(); }
+  function unwatchTeacher(uid) {
+    const s = School.tSubs[uid];
+    if (s) { s.main.forEach(offSub); s.ws.forEach(offSub); offSub(s.day); }
+    delete School.tSubs[uid];
+    if (School.kind === 'cloud') delete School.t[uid];
+  }
+  // Every 30 seconds: a new day starts new attendance documents, and the example school's students keep arriving.
+  function schoolTick() {
+    if (School.state !== 'member') return;
+    if (School.date !== todayStr()) {
+      School.date = todayStr();
+      if (School.kind === 'cloud') Object.keys(School.tSubs).forEach(watchDay);
+    }
+    if (School.kind === 'demo') demoRefreshDays();
+  }
+
+  /* ----- Reading a school's classes ----- */
+  // One teacher's classes as the school sees them. Your own come straight from this page, so they're always current.
+  function tData(uid) {
+    if (uid === meUid()) {
+      return { self: true, profile: S.settings, ws: Store.ws || S.settings.ws || '', periods: S.periods, students: S.students, day: S.days[School.date] || {}, status: Store.isLoaded() ? 'ready' : 'loading' };
+    }
+    return School.t[uid] || null;
+  }
+  function personName(uid, m, d) {
+    if (uid === meUid()) return Session.kind === 'demo' ? 'Example classroom' : (S.settings.teacher || (Session.user && Session.user.name) || m.name || m.email || 'You');
+    const p = d && d.profile;
+    return (p && (p.teacher || p.name)) || m.name || m.email || 'Teacher';
+  }
+  function schoolPeople() {
+    const order = { admin: 0, registrar: 1, teacher: 2 };
+    return Object.entries(School.members).map(([uid, m]) => {
+      const d = tData(uid);
+      return { uid, m, d, role: ROLE_LABEL[m.role] ? m.role : 'teacher', name: personName(uid, m, d), email: m.email || '', you: uid === meUid(), owner: uid === School.owner };
+    }).sort((a, b) => (order[a.role] - order[b.role]) || sortName(a.name, b.name));
+  }
+  const bareName = (n) => String(n || '').replace(/^\s*(mr|mrs|ms|mx|miss|dr|prof|coach)\.?\s+/i, '').trim();
+  const sortName = (a, b) => bareName(a).split(/\s+/).pop().localeCompare(bareName(b).split(/\s+/).pop(), undefined, { sensitivity: 'base' }) || a.localeCompare(b);
+  // "Ms. Alvarez" stays as is; "Jane Lee" becomes "Lee", for short labels like "P3 Lee".
+  const shortName = (n) => (/^\s*(mr|mrs|ms|mx|miss|dr|prof|coach)\.?\s/i.test(n) ? String(n).trim() : (String(n || '').trim().split(/\s+/).pop() || n));
+  const tShort = (x) => (x.you ? 'You' : shortName(x.name));
+  const dPeriods = (d) => Object.values((d && d.periods) || {}).sort((a, b) => (a.num - b.num) || ((toMin(a.start) || 0) - (toMin(b.start) || 0)) || a.course.localeCompare(b.course));
+  const dRoster = (d, pid) => Object.values(d.students).filter((s) => s.periods.includes(pid)).sort(byName);
+  function dCounts(d, pid) {
+    const c = { P: 0, T: 0, A: 0, E: 0, U: 0, total: 0 };
+    const m = (d.day && d.day[pid]) || {};
+    for (const st of Object.values(d.students)) {
+      if (!st.periods.includes(pid)) continue;
+      c.total++;
+      const mk = m[st.id];
+      if (mk && STATUS[mk.s]) c[mk.s]++; else c.U++;
+    }
+    return c;
+  }
+  // What a teacher's day looks like right now: a class in session, one about to start, the next one, or done.
+  function dNow(d) {
+    const list = dPeriods(d);
+    if (!list.length) return { kind: 'none' };
+    const live = list.find((p) => phaseOf(p) === 'now');
+    if (live) return { kind: 'now', p: live };
+    const n = nowMin();
+    const later = list.filter((p) => { const s = toMin(p.start); return s != null && s > n; }).sort((a, b) => toMin(a.start) - toMin(b.start));
+    if (later[0] && toMin(later[0].start) - n <= passOf(later[0])) return { kind: 'passing', p: later[0] };
+    if (later[0]) return { kind: 'next', p: later[0] };
+    return { kind: 'done' };
+  }
+  const usable = (x) => !!(x.d && x.d.status === 'ready');
+
+  // Every student in the school, grouped across classes: by school key when the office linked them, else by name.
+  function schoolStudents() {
+    const groups = [];
+    const bySk = new Map(), byNk = new Map();
+    const entries = [];
+    for (const x of schoolPeople()) if (usable(x)) for (const st of Object.values(x.d.students)) entries.push({ x, st });
+    entries.sort((a, b) => (a.st.sk ? 0 : 1) - (b.st.sk ? 0 : 1));
+    for (const e of entries) {
+      const nk = nameKey(e.st.first, e.st.last);
+      let g = e.st.sk ? bySk.get(e.st.sk) : byNk.get(nk);
+      if (!g) {
+        g = { key: e.st.sk || `n-${nk}`, sk: e.st.sk || null, first: e.st.first, last: e.st.last, nk, entries: [], parents: new Set(), tag: false, token: null, tagAt: -1 };
+        groups.push(g);
+        if (g.sk) bySk.set(g.sk, g);
+        if (!byNk.has(nk)) byNk.set(nk, g);
+      }
+      g.entries.push(e);
+      e.st.parents.forEach((p) => g.parents.add(p));
+      if (e.st.token || e.st.uids.length) g.tag = true;
+      if (e.st.token && (e.st.tagAt || 0) > g.tagAt) { g.token = e.st.token; g.tagAt = e.st.tagAt || 0; }
+    }
+    return groups.sort(byName);
+  }
+  const groupClasses = (g) => g.entries.flatMap((e) => e.st.periods.map((pid) => ({ x: e.x, st: e.st, p: e.x.d.periods[pid] })).filter((c) => c.p))
+    .sort((a, b) => (a.p.num - b.p.num) || sortName(a.x.name, b.x.name));
+  // The school tag code a student keeps in every class: their school key, or else the code of a tag they already have.
+  const groupSk = (g) => (g && (g.sk || g.token)) || rid(12);
+
+  /* ----- Changing a teacher's roster (admins and registrars) ----- */
+  // patch: { <studentId>: changes | null }. Changes to an existing student hold only the fields that change, so a
+  // teacher's own edits made at the same moment aren't overwritten. A new student is a complete record.
+  function writeRoster(uid, patch) {
+    const ids = Object.keys(patch);
+    if (!ids.length) return Promise.resolve();
+    if (uid === meUid()) {
+      const ups = [], dels = [];
+      for (const id of ids) { if (patch[id]) ups.push({ ...(S.students[id] || {}), ...patch[id], id }); else dels.push(id); }
+      if (ups.length) upsertStudents(ups);
+      if (dels.length) removeStudents(dels);
+      schoolChanged();
+      return Promise.resolve();
+    }
+    const t = School.t[uid];
+    if (!t) return Promise.reject(Object.assign(new Error('gone'), { code: 'gone' }));
+    const data = {};
+    for (const id of ids) {
+      const ch = patch[id];
+      if (!ch) { delete t.students[id]; data[id] = null; continue; }
+      const existed = !!t.students[id];
+      const full = normStudent({ ...(t.students[id] || {}), ...ch, id });
+      t.students[id] = full;
+      data[id] = existed ? pickFields(full, Object.keys(ch)) : full;
+    }
+    schoolChanged();
+    if (School.kind === 'demo') { saveDemoSchool(); return Promise.resolve(); }
+    if (!t.ws) return Promise.reject(Object.assign(new Error('no-classes'), { code: 'no-classes' }));
+    return Cloud.fs.doc(`teachers/${uid}/ws/${t.ws}/meta/roster`).set({ students: data }, { merge: true });
+  }
+  function pickFields(obj, keys) { const out = {}; for (const k of keys) if (obj[k] !== undefined) out[k] = obj[k]; return out; }
+  function newStudentRec(first, last, periods, parents, sk) {
+    const rec = normStudent({ id: 's' + rid(9), first, last, periods, token: null, uids: [], tagAt: null, parents: [...parents].slice(0, 3) });
+    if (sk) rec.sk = sk;
+    return rec;
+  }
+
+  /* ----- Membership changes ----- */
+  const meName = () => S.settings.teacher || (Session.user && Session.user.name) || (School.me && School.me.name) || (School.me && School.me.email) || '';
+  const dref = (p) => Cloud.fs.doc(p);
+  function schoolErrText(err, what) {
+    const code = String((err && err.code) || '');
+    if (code.includes('permission-denied')) return `Firestore didn’t allow ${what}. If you run this TapRoll site, paste the latest rules from the setup guide into Firebase.`;
+    if (code.includes('unavailable') || code.includes('network')) return 'Can’t reach TapRoll right now. Check your connection and try again.';
+    return `Couldn’t finish ${what}. Try again.`;
+  }
+  async function createSchool(name) {
+    const me = School.me;
+    if (School.kind === 'demo') return;
+    const sid = 'sc' + rid(10);
+    const at = Date.now();
+    const b = Cloud.fs.batch();
+    if (School.state === 'member' && School.sid && School.owner !== me.uid) b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
+    b.set(dref(`schools/${sid}`), { name, owner: me.uid, createdAt: at });
+    b.set(dref(`schools/${sid}/members/${me.uid}`), { role: 'admin', name: meName(), email: me.email, at });
+    b.set(dref(`teachers/${me.uid}`), { schoolId: sid, school: name }, { merge: true });
+    School.autoOpened = false;   // Firestore applies the batch on this device right away, so the office can open next
+    await b.commit();
+  }
+  async function joinSchool() {
+    const inv = School.invite, me = School.me;
+    if (!inv) return;
+    const b = Cloud.fs.batch();
+    if (School.state === 'member' && School.sid && School.sid !== inv.sid) b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
+    b.set(dref(`schools/${inv.sid}/members/${me.uid}`), { role: inv.role, name: meName(), email: me.email, at: Date.now() });
+    b.delete(dref(`invites/${me.email}`));
+    b.delete(dref(`schools/${inv.sid}/invites/${me.email}`));
+    b.set(dref(`teachers/${me.uid}`), { schoolId: inv.sid, school: inv.school || '' }, { merge: true });
+    School.autoOpened = false;
+    await b.commit();
+    School.invite = null; School.inviteState = 'none';
+  }
+  async function declineInvite() {
+    const inv = School.invite, me = School.me;
+    if (!inv) return;
+    const b = Cloud.fs.batch();
+    b.delete(dref(`invites/${me.email}`));
+    b.delete(dref(`schools/${inv.sid}/invites/${me.email}`));
+    await b.commit();
+    School.invite = null; School.inviteState = 'none';
+  }
+  async function leaveSchool() {
+    const me = School.me;
+    if (School.kind === 'demo') return;
+    const b = Cloud.fs.batch();
+    b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
+    b.set(dref(`teachers/${me.uid}`), { schoolId: '' }, { merge: true });
+    await b.commit();
+  }
+  async function inviteOne(email, role) {
+    const at = Date.now();
+    const rec = { role, byName: meName(), byEmail: School.me.email, at };
+    if (School.kind === 'demo') { School.invites[email] = { ...rec, email }; saveDemoSchool(); return; }
+    const b = Cloud.fs.batch();
+    b.set(dref(`invites/${email}`), { ...rec, sid: School.sid, school: School.name });
+    b.set(dref(`schools/${School.sid}/invites/${email}`), { ...rec, email });
+    await b.commit();
+  }
+  async function cancelInvite(email) {
+    if (School.kind === 'demo') { delete School.invites[email]; saveDemoSchool(); return; }
+    const b = Cloud.fs.batch();
+    b.delete(dref(`invites/${email}`));
+    b.delete(dref(`schools/${School.sid}/invites/${email}`));
+    await b.commit();
+  }
+  async function removeMember(uid) {
+    if (School.kind === 'demo') { delete School.members[uid]; delete School.t[uid]; saveDemoSchool(); return; }
+    await dref(`schools/${School.sid}/members/${uid}`).delete();
+  }
+  async function setMemberRole(uid, role) {
+    if (School.kind === 'demo') { School.members[uid] = { ...School.members[uid], role }; saveDemoSchool(); return; }
+    await dref(`schools/${School.sid}/members/${uid}`).set({ role }, { merge: true });
+  }
+  async function renameSchool(name) {
+    if (School.kind === 'demo') { School.name = name; setSettings({ school: name }); return; }
+    await dref(`schools/${School.sid}`).set({ name }, { merge: true });
+  }
+  // Email/password accounts confirm their address before joining a school or sending invites.
+  async function sendVerifyEmail() {
+    const u = Cloud.auth && Cloud.auth.currentUser;
+    if (!u) return;
+    try { await u.sendEmailVerification({ url: `${autoBase() || APP_URL}#school` }); }
+    catch (e) {
+      if (!/continue-uri|unauthorized|invalid-continue/.test(String(e && e.code))) throw e;
+      await u.sendEmailVerification();
+    }
+    School.verifySent = true;
+  }
+  async function recheckVerified() {
+    const u = Cloud.auth && Cloud.auth.currentUser;
+    if (!u) return false;
+    await u.reload();
+    const fresh = Cloud.auth.currentUser;
+    if (fresh && fresh.emailVerified) { await fresh.getIdToken(true); School.me.verified = true; }
+    return !!(fresh && fresh.emailVerified);
+  }
+
+  /* ----- School office view ----- */
+  function schoolRailItem() {
+    if (!isStaff()) return '';
+    const active = ui.view === 'school';
+    return `<li><button class="pitem school ${active ? 'is-active' : ''}" data-act="open-school" aria-current="${active ? 'page' : 'false'}">`
+      + `<span class="pnum">${ic('school')}</span><span class="pmain"><span class="pcourse">School office</span><span class="ptime">${esc(School.name || 'Your school')}</span></span><span class="pside"></span></button></li>`;
+  }
+  function openSchoolView(tab) {
+    if (!isStaff()) { openSchoolPanel(); return; }
+    closeModal();
+    ui.view = 'school'; ui.periodId = null;
+    if (tab) ui.scTab = tab;
+    NFC.stopScan(true);
+    scheduleRender();
+    window.scrollTo({ top: 0 });
+  }
+  // A school office account with no classes of its own opens to the School office.
+  function maybeOpenOffice() {
+    if (School.autoOpened || !isStaff() || !ui.ready || ui.screen !== 'app') return;
+    School.autoOpened = true;
+    if (pendingSchoolLink || (ui.view === 'overview' && !Object.keys(S.periods).length)) {
+      pendingSchoolLink = false;
+      ui.view = 'school'; ui.periodId = null;
+      scheduleRender();
+    }
+  }
+  function viewSchool() {
+    const tab = ['live', 'teachers', 'students'].includes(ui.scTab) ? ui.scTab : 'live';
+    const people = schoolPeople();
+    const pend = Object.keys(School.invites).length;
+    const tabs = [['live', 'Live', ''], ['teachers', 'People', pend ? `<b class="cnt">${pend}</b>` : ''], ['students', 'Students', '']];
+    const actions = tab === 'live' ? `<button class="btn sm" data-act="sc-csv">${ic('download')} Today (CSV)</button>`
+      : tab === 'teachers' ? `<button class="btn sm primary" data-act="sc-invite">${ic('plus')} Invite people</button>`
+        : `<button class="btn sm" data-act="sc-import">${ic('sheet')} Import spreadsheet</button><button class="btn sm primary" data-act="sc-add">${ic('plus')} Add students</button>`;
+    const head = `<header class="vhead"><div class="vhead-text"><div class="eyebrow">${esc(fmtDateLong(todayStr()))} · ${esc(ROLE_LABEL[School.role])}</div>`
+      + `<h1 class="vtitle">${esc(School.name || 'School office')}</h1></div><div class="vhead-actions">${actions}</div></header>`;
+    const nav = `<div class="sc-tabs" role="tablist" aria-label="School office">${tabs.map(([v, l, b]) => `<button type="button" role="tab" aria-selected="${tab === v}" data-act="sc-tab" data-v="${v}">${l}${b}</button>`).join('')}</div>`;
+    const body = tab === 'teachers' ? scPeopleTab(people) : tab === 'students' ? scStudentsTab() : scLiveTab(people);
+    return head + schoolBanners() + nav + body;
+  }
+  function schoolBanners() {
+    let out = '';
+    if (Session.kind === 'demo' && !ui.hideSample) {
+      out += `<div class="banner">${ic('spark')}<p><b>You’re exploring an example school.</b> The teachers and students are made up, and changes stay on this device.</p>`
+        + `<button class="btn sm primary" data-act="demo-signup">Create your account</button><button class="btn sm ghost" data-act="hide-sample">Keep exploring</button></div>`;
+    }
+    if (School.error && School.error.includes('permission-denied')) {
+      out += `<div class="banner warn">${ic('alert')}<p><b>Some school data is blocked.</b> If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.</p><button class="btn sm" data-act="setup-guide">Setup guide</button></div>`;
+    }
+    return out;
+  }
+
+  // Live: each teacher's class right now, school totals for today, and who's absent.
+  function scLiveTab(people) {
+    const teaching = people.filter((x) => x.role === 'teacher' || (usable(x) && dPeriods(x.d).length));
+    if (!teaching.length) {
+      return `<div class="empty"><h3>No teachers yet</h3><p>Invite your teachers. Once they join and add their classes, you’ll see each class fill in here as students tap in.</p>`
+        + `<div class="row"><button class="btn primary" data-act="sc-invite">${ic('plus')} Invite teachers</button></div></div>`;
+    }
+    const rank = { now: 0, passing: 1, next: 2, done: 3, none: 4, wait: 5 };
+    const rows = teaching.map((x) => ({ x, now: usable(x) ? dNow(x.d) : { kind: 'wait' } }))
+      .sort((a, b) => (rank[a.now.kind] - rank[b.now.kind]) || sortName(a.x.name, b.x.name));
+    let inNow = 0, inTot = 0, tardy = 0, classesNow = 0;
+    const absent = new Map();
+    for (const { x, now } of rows) {
+      if (!usable(x)) continue;
+      if ((now.kind === 'now' || now.kind === 'passing') && now.p) {
+        const c = dCounts(x.d, now.p.id);
+        inNow += c.P + c.T; inTot += c.total;
+        if (now.kind === 'now') classesNow++;
+      }
+      for (const p of dPeriods(x.d)) {
+        const marks = (x.d.day || {})[p.id] || {};
+        for (const [sid, mk] of Object.entries(marks)) {
+          const st = x.d.students[sid];
+          if (!st || !st.periods.includes(p.id)) continue;
+          if (mk.s === 'T') tardy++;
+          if (mk.s === 'A') {
+            const k = st.sk || nameKey(st.first, st.last);
+            const a = absent.get(k) || { st, where: [] };
+            a.where.push(`P${p.num} ${tShort(x)}`);
+            absent.set(k, a);
+          }
+        }
+      }
+    }
+    const kpis = `<section class="card kpis" aria-label="Today at ${esc(School.name)}">`
+      + `<div class="kpi"><div class="k">Checked in now</div><div class="v">${fmtCount(inNow)}<small>of ${fmtCount(inTot)}</small></div></div>`
+      + `<div class="kpi"><div class="k">Classes in session</div><div class="v">${classesNow}<small>of ${teaching.length} teachers</small></div></div>`
+      + `<div class="kpi"><div class="k">Tardies today</div><div class="v">${fmtCount(tardy)}</div></div>`
+      + `<div class="kpi"><div class="k">Students absent today</div><div class="v">${fmtCount(absent.size)}</div></div></section>`;
+    const list = `<ul class="sc-live">${rows.map(({ x, now }) => scLiveRow(x, now)).join('')}</ul>`;
+    const abs = [...absent.values()].sort((a, b) => byName(a.st, b.st));
+    const absHtml = abs.length
+      ? `<ul class="sc-absent">${abs.slice(0, 14).map((a) => `<li><span class="av" style="--h:${hueOf(a.st.sk || a.st.id)}">${esc(initials(a.st))}</span><span class="wname"><b>${esc(fullName(a.st))}</b><span>${esc(a.where.join(' · '))}</span></span></li>`).join('')}</ul>`
+        + (abs.length > 14 ? `<p class="watch-empty">And ${abs.length - 14} more. Download today’s CSV for the full list.</p>` : '')
+      : `<p class="watch-empty">No one is marked absent yet today.</p>`;
+    return kpis + `<div class="ov-grid"><section aria-label="Classes right now"><div class="sect-head"><h2 class="sect">Right now</h2><span class="sect-note">${esc(fmtClock(Date.now()))} · updates as students tap in</span></div>${list}</section>`
+      + `<div class="side-stack"><section><div class="sect-head"><h2 class="sect">Absent today</h2><span class="sect-note">Marked absent in any class</span></div><div class="card">${absHtml}</div></section></div></div>`;
+  }
+  function scLiveRow(x, now) {
+    const av = `<span class="av" style="--h:${hueOf(x.uid)}">${esc(nameInitials(x.name))}</span>`;
+    const who = (sub) => `<span class="sc-who"><b>${esc(x.name)}${x.you ? ' <em>(you)</em>' : ''}</b><span>${sub}</span></span>`;
+    let sub = '', meter = '', phase = '';
+    if (!x.d || x.d.status === 'loading') { sub = 'Loading classes…'; phase = '<span class="phase">Loading</span>'; }
+    else if (x.d.status === 'denied' || x.d.status === 'error') { sub = 'TapRoll can’t open these classes right now.'; phase = '<span class="phase">No access</span>'; }
+    else if (now.kind === 'none') { sub = 'No classes added yet'; phase = '<span class="phase">No classes</span>'; }
+    else if (now.kind === 'done') {
+      const tot = dPeriods(x.d).reduce((acc, p) => { const c = dCounts(x.d, p.id); acc.in += c.P + c.T; acc.n += c.total; acc.A += c.A; return acc; }, { in: 0, n: 0, A: 0 });
+      sub = `Done for today · ${tot.A} absent`;
+      meter = `<span class="sc-meter"><span class="sc-nums"><b>${fmtCount(tot.in)}</b>/${fmtCount(tot.n)} <span>checked in today</span></span></span>`;
+      phase = '<span class="phase done">Done</span>';
+    } else if (now.kind === 'next') {
+      sub = `Next: P${esc(now.p.num)} ${esc(now.p.course)} at ${esc(fmtHMap(now.p.start))}`;
+      phase = '<span class="phase">Later</span>';
+    } else {
+      const p = now.p, c = dCounts(x.d, p.id);
+      sub = `P${esc(p.num)} · ${esc(p.course || periodLabel(p))}${p.room ? ` · Rm ${esc(p.room)}` : ''}`;
+      const extra = [c.T ? `${c.T} tardy` : '', c.A ? `${c.A} absent` : '', c.E ? `${c.E} excused` : '', c.U ? `${c.U} not yet` : ''].filter(Boolean).join(' · ');
+      meter = `<span class="sc-meter"><span class="bar" aria-hidden="true">${segs(c)}</span><span class="sc-nums"><b>${c.P + c.T}</b>/${c.total} <span>${esc(extra || 'everyone’s here')}</span></span></span>`;
+      phase = now.kind === 'now' ? '<span class="phase now">In class</span>' : `<span class="phase">Bell ${esc(fmtHM(p.start))}</span>`;
+    }
+    return `<li><button class="sc-trow ${now.kind === 'now' ? 'ph-now' : ''}" data-act="sc-teacher" data-id="${esc(x.uid)}">${av}${who(sub)}${meter}${phase}</button></li>`;
+  }
+
+  // People: members with their roles, and invites that haven't been accepted yet.
+  function scPeopleTab(people) {
+    const rows = people.map((x) => {
+      const cls = usable(x) ? dPeriods(x.d) : [];
+      const nStu = usable(x) ? Object.keys(x.d.students).length : 0;
+      const meta = x.role === 'teacher' || cls.length ? (usable(x) ? `${plural(cls.length, 'class', 'classes')} · ${plural(nStu, 'student')}` : (x.d && x.d.status === 'loading' ? 'Loading classes…' : 'Classes not shared')) : ROLE_NOTE[x.role];
+      const tag = x.owner ? 'Owner' : ROLE_LABEL[x.role];
+      const can = canManage(x);
+      return `<li class="sc-prow"><span class="av" style="--h:${hueOf(x.uid)}">${esc(nameInitials(x.name))}</span>`
+        + `<span class="sc-who"><b>${esc(x.name)}${x.you ? ' <em>(you)</em>' : ''}</b><span>${esc(x.email || '')}${x.email ? ' · ' : ''}${esc(meta)}</span></span>`
+        + `<span class="role r-${esc(x.role)}">${esc(tag)}</span>`
+        + `<span class="sc-pact">${x.role === 'teacher' || cls.length ? `<button class="btn sm" data-act="sc-teacher" data-id="${esc(x.uid)}">Classes</button>` : ''}`
+        + `${can ? `<button class="btn sm ghost icon" data-act="sc-member" data-id="${esc(x.uid)}" aria-label="Manage ${esc(x.name)}">${ic('edit')}</button>` : ''}</span></li>`;
+    }).join('');
+    const pend = Object.entries(School.invites).map(([email, v]) => ({ email, ...v })).sort((a, b) => (b.at || 0) - (a.at || 0));
+    const pendHtml = pend.length
+      ? `<ul class="sc-people">${pend.map((v) => {
+        const canCancel = v.role === 'teacher' || isAdmin();
+        const msg = inviteMessage([v.email], v.role);
+        const web = prefs.mailVia !== 'app';
+        return `<li class="sc-prow"><span class="av av-pend">${ic('mail')}</span><span class="sc-who"><b>${esc(v.email)}</b><span>Invited ${v.at ? esc(fmtDay(dateStr(new Date(v.at)))) : ''}${v.byName ? ` by ${esc(v.byName)}` : ''} · not joined yet</span></span>`
+          + `<span class="role r-${esc(v.role)}">${esc(ROLE_LABEL[v.role] || 'Teacher')}</span>`
+          + `<span class="sc-pact"><a class="btn sm" href="${esc(composeUrl([v.email], msg.subject, msg.body))}"${web ? ' target="_blank" rel="noopener"' : ''}>${ic('mail')} Email</a>`
+          + `${canCancel ? `<button class="btn sm ghost" data-act="sc-uninvite" data-email="${esc(v.email)}">Cancel</button>` : ''}</span></li>`;
+      }).join('')}</ul>`
+      : '<p class="watch-empty">No pending invites.</p>';
+    const loading = School.kind === 'cloud' && !School.membersLoaded;
+    return `<section aria-label="People"><div class="sect-head"><h2 class="sect">${loading ? 'People' : plural(people.length, 'person', 'people')}</h2><span class="sect-note">Admins and registrars see every class</span></div>`
+      + `<div class="card"><ul class="sc-people">${rows || '<li class="watch-empty">Loading…</li>'}</ul></div></section>`
+      + `<section aria-label="Pending invites"><div class="sect-head"><h2 class="sect">Pending invites</h2><span class="sect-note">They join by signing in with the invited email</span></div><div class="card">${pendHtml}</div></section>`;
+  }
+  // Admins manage anyone but the owner. Registrars can remove teachers.
+  const canManage = (x) => !x.owner && !x.you && (isAdmin() || (isStaff() && x.role === 'teacher'));
+
+  function scStudentsTab() {
+    const groups = schoolStudents();
+    const q = normKey(ui.scSearch);
+    const shown = q ? groups.filter((g) => g.nk.includes(q) || [...g.parents].some((p) => p.includes(q))) : groups;
+    const placements = groups.reduce((n, g) => n + groupClasses(g).length, 0);
+    const noTag = groups.filter((g) => !g.tag).length;
+    const limit = ui.scAll ? shown.length : 120;
+    const tools = `<div class="rtools"><label class="search">${ic('search')}<span class="sr-only">Search students</span>`
+      + `<input class="input" id="sc-search" type="search" placeholder="Search ${fmtCount(groups.length)} students" value="${esc(ui.scSearch)}" autocomplete="off"></label>`
+      + `<span class="sect-note">${fmtCount(placements)} class spots · ${fmtCount(noTag)} without a tag</span></div>`;
+    if (!groups.length) {
+      return tools + `<div class="empty"><h3>No students yet</h3><p>Import a spreadsheet with a row for each student in each class, or add students to a class by name. Teachers can also add their own.</p>`
+        + `<div class="row"><button class="btn primary" data-act="sc-import">${ic('sheet')} Import spreadsheet</button><button class="btn" data-act="sc-add">${ic('plus')} Add students</button></div></div>`;
+    }
+    const rows = shown.slice(0, limit).map((g) => {
+      const cls = groupClasses(g);
+      return `<li><button class="sc-srow" data-act="sc-student" data-key="${esc(g.key)}"><span class="av" style="--h:${hueOf(g.key)}">${esc(initials(g))}</span>`
+        + `<span class="sc-who"><b>${esc(fullName(g))}</b><span>${esc(g.parents.size ? [...g.parents].join(', ') : 'No parent email')}</span></span>`
+        + `<span class="sc-cls">${cls.map((c) => `<span class="ctag">P${esc(c.p.num)} ${esc(tShort(c.x))}</span>`).join('')}</span>`
+        + `<span class="sc-tag ${g.tag ? 'on' : ''}" title="${g.tag ? 'Has a tag' : 'No tag yet'}">${ic('tag')}</span></button></li>`;
+    }).join('');
+    return tools + (shown.length ? `<div class="card"><ul class="sc-students">${rows}</ul></div>` : '<p class="feed-empty">No students match.</p>')
+      + (shown.length > limit ? `<div class="row"><button class="btn" data-act="sc-all">Show all ${fmtCount(shown.length)}</button></div>` : '');
+  }
+
+  /* ----- Drawers: a teacher's classes, a student's classes ----- */
+  function openSchoolTeacher(uid) {
+    ui.scDrawer = { kind: 'teacher', uid, open: new Set() };
+    const x = schoolPeople().find((p) => p.uid === uid);
+    if (x && usable(x)) { const now = dNow(x.d); if (now.p && (now.kind === 'now' || now.kind === 'passing')) ui.scDrawer.open.add(now.p.id); }
+    openModal(scTeacherHtml(uid), { cls: 'drawer', label: 'Teacher', onClose: () => { ui.scDrawer = null; } });
+    bindScDrawer();
+  }
+  function scTeacherHtml(uid) {
+    const x = schoolPeople().find((p) => p.uid === uid);
+    if (!x) return `${modalHead('Not in your school anymore')}<p class="m-text">This person has left ${esc(School.name)}.</p>`;
+    const head = `<div class="m-head dr-head"><span class="av" style="--h:${hueOf(x.uid)}">${esc(nameInitials(x.name))}</span>`
+      + `<div class="dr-title"><h2>${esc(x.name)}${x.you ? ' (you)' : ''}</h2><p>${esc([x.email, x.owner ? 'Owner' : ROLE_LABEL[x.role]].filter(Boolean).join(' · '))}</p></div>`
+      + `<button class="btn ghost icon" data-act="close-modal" aria-label="Close">${ic('x')}</button></div>`;
+    let body;
+    if (!x.d || x.d.status === 'loading') body = '<p class="m-text">Loading classes…</p>';
+    else if (x.d.status !== 'ready') body = `<p class="m-text">TapRoll can’t open ${esc(x.name)}’s classes. They may need to join ${esc(School.name)} again.</p>`;
+    else {
+      const list = dPeriods(x.d);
+      body = list.length ? list.map((p, i) => scPeriodSection(x, p, i === 0)).join('') : `<p class="m-text">${esc(x.name)} hasn’t added any classes yet. Once they add their periods, you can put students in them.</p>`;
+    }
+    const foot = canManage(x) ? `<section class="dsec"><div class="row"><button class="btn" data-act="sc-member" data-id="${esc(x.uid)}">${ic('edit')} ${isAdmin() ? 'Change role or remove' : 'Remove from school'}</button></div></section>` : '';
+    return head + body + foot;
+  }
+  function scPeriodSection(x, p, first) {
+    const c = dCounts(x.d, p.id);
+    const ph = phaseOf(p);
+    const marks = (x.d.day || {})[p.id] || {};
+    const roster = dRoster(x.d, p.id);
+    const label = ph === 'now' ? '<span class="phase now">In class</span>' : ph === 'done' ? '<span class="phase done">Done</span>' : '<span class="phase">Later</span>';
+    const roll = roster.length
+      ? `<ul class="sc-roll">${roster.map((st) => {
+        const mk = marks[st.id];
+        const s = mk ? mk.s : 'U';
+        return `<li><span class="sc-rname">${esc(st.first)} <b>${esc(st.last)}</b></span><span class="pill ${s === 'U' ? 'u' : STATUS_CLS[s]}">${esc(mk ? markLabel(mk) : 'Not yet')}</span><time>${mk && (mk.s === 'P' || mk.s === 'T') ? esc(fmtClock(mk.t)) : ''}</time></li>`;
+      }).join('')}</ul>`
+      : '<p class="m-text small">No students in this class yet.</p>';
+    const open = ui.scDrawer && ui.scDrawer.open.has(p.id);
+    return `<section class="dsec${first ? ' first' : ''} sc-per"><div class="sc-phead"><span class="pnum">P${esc(p.num)}</span>`
+      + `<div class="sc-ptitle"><b>${esc(p.course || periodLabel(p))}</b><span>${esc(fmtHM(p.start))}–${esc(fmtHM(p.end))}${p.room ? ` · Rm ${esc(p.room)}` : ''} · ${plural(c.total, 'student')}</span></div>${label}</div>`
+      + `<div class="bar" aria-hidden="true">${segs(c)}</div><div class="legend">${legend(c, true)}</div>`
+      + `<details class="sc-rollbox" data-pid="${esc(p.id)}"${open ? ' open' : ''}><summary>Roster and check-ins</summary>${roll}</details>`
+      + `${isStaff() ? `<div class="row"><button class="btn sm" data-act="sc-add" data-uid="${esc(x.uid)}" data-pid="${esc(p.id)}">${ic('plus')} Add students</button></div>` : ''}</section>`;
+  }
+  function bindScDrawer() {
+    document.querySelectorAll('#modal-root .sc-rollbox').forEach((d) => d.addEventListener('toggle', () => {
+      if (!ui.scDrawer || !ui.scDrawer.open) return;
+      if (d.open) ui.scDrawer.open.add(d.dataset.pid); else ui.scDrawer.open.delete(d.dataset.pid);
+    }));
+    const f = $('#scs-form');
+    if (f) bindScStudentForm(f);
+  }
+  function refreshScDrawer() {
+    const box = $('#modal-root .modal');
+    if (!box || !ui.scDrawer) return;
+    if (ui.scDrawer.kind === 'student' && box.contains(document.activeElement) && document.activeElement.matches('input, select, textarea')) return;   // don't redraw under someone typing
+    const top = box.scrollTop;
+    box.innerHTML = ui.scDrawer.kind === 'teacher' ? scTeacherHtml(ui.scDrawer.uid) : scStudentHtml(ui.scDrawer.key);
+    box.scrollTop = top;
+    bindScDrawer();
+  }
+
+  function findGroup(key) { return schoolStudents().find((g) => g.key === key) || null; }
+  function openSchoolStudent(key) {
+    ui.scDrawer = { kind: 'student', key, open: new Set(), pickUid: '' };
+    openModal(scStudentHtml(key), { cls: 'drawer', label: 'Student', onClose: () => { ui.scDrawer = null; } });
+    bindScDrawer();
+  }
+  function scStudentHtml(key) {
+    const g = findGroup(key);
+    if (!g) return `${modalHead('Student not found')}<p class="m-text">This student isn’t in any class anymore.</p>`;
+    const cls = groupClasses(g);
+    const head = `<div class="m-head dr-head"><span class="av" style="--h:${hueOf(g.key)}">${esc(initials(g))}</span>`
+      + `<div class="dr-title"><h2>${esc(fullName(g))}</h2><p>${esc(plural(cls.length, 'class', 'classes'))} · ${g.tag ? 'has a tag' : 'no tag yet'}</p></div>`
+      + `<button class="btn ghost icon" data-act="close-modal" aria-label="Close">${ic('x')}</button></div>`;
+    const today = (x, st, p) => { const mk = ((x.d.day || {})[p.id] || {})[st.id]; return mk ? `<span class="pill ${STATUS_CLS[mk.s]}">${esc(markLabel(mk))}</span>` : '<span class="pill u">Not yet</span>'; };
+    const rows = cls.map(({ x, st, p }) => `<li><span class="pnum">P${esc(p.num)}</span><span class="sc-who"><b>${esc(p.course || periodLabel(p))}</b><span>${esc(x.name)} · ${esc(fmtHM(p.start))}–${esc(fmtHM(p.end))}</span></span>${today(x, st, p)}`
+      + `<button class="btn sm ghost icon" data-act="sc-unplace" data-key="${esc(g.key)}" data-uid="${esc(x.uid)}" data-sid="${esc(st.id)}" data-pid="${esc(p.id)}" aria-label="Remove from P${esc(p.num)} ${esc(p.course)}">${ic('x')}</button></li>`).join('');
+    const teachers = schoolPeople().filter((x) => usable(x) && dPeriods(x.d).length);
+    const pick = ui.scDrawer && ui.scDrawer.pickUid && teachers.find((x) => x.uid === ui.scDrawer.pickUid) ? ui.scDrawer.pickUid : (teachers[0] ? teachers[0].uid : '');
+    const tSel = teachers.find((x) => x.uid === pick);
+    const addForm = teachers.length
+      ? `<form id="scs-form" class="m-body" data-key="${esc(g.key)}"><div class="grid2"><label class="field"><span>Teacher</span><select id="scs-teacher">${teachers.map((x) => `<option value="${esc(x.uid)}" ${x.uid === pick ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`
+        + `<label class="field"><span>Class</span><select id="scs-period">${tSel ? dPeriods(tSel.d).map((p) => `<option value="${esc(p.id)}">P${esc(p.num)} · ${esc(p.course)}</option>`).join('') : ''}</select></label></div>`
+        + `<div class="row"><button type="submit" class="btn sm primary">${ic('plus')} Add to class</button></div></form>`
+      : '<p class="m-text small">No teacher has added classes yet.</p>';
+    return head
+      + `<section class="dsec first"><h3>Classes</h3>${cls.length ? `<ul class="sc-clist">${rows}</ul>` : '<p class="m-text small">Not in any class.</p>'}</section>`
+      + `<section class="dsec"><h3>Add to a class</h3>${addForm}</section>`
+      + `<section class="dsec"><h3>Parent email</h3><form id="scp-form" class="m-body" data-key="${esc(g.key)}"><label class="field"><span>Parent or guardian email <em>optional</em></span>`
+      + `<input id="scp-emails" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="300" value="${esc([...g.parents].slice(0, 3).join(', '))}" placeholder="parent@example.com">`
+      + `<small>Saved in each of ${esc(g.first || 'their')} classes, so every teacher can email a parent about an absence or tardy.</small></label>`
+      + `<p class="m-text small err-text" id="scp-err" hidden></p><div class="row"><button type="submit" class="btn sm primary">Save</button></div></form></section>`
+      + `<section class="dsec"><h3>NFC tag</h3><p class="m-text small">${g.tag ? `${esc(g.first || 'This student')} has a tag. ` : ''}A tag written for ${esc(g.first || 'this student')} in any of these classes checks them in to all of them.</p></section>`;
+  }
+  function bindScStudentForm(f) {
+    const tSel = $('#scs-teacher');
+    if (tSel) tSel.addEventListener('change', () => { if (ui.scDrawer) ui.scDrawer.pickUid = tSel.value; const pSel = $('#scs-period'); const x = schoolPeople().find((p) => p.uid === tSel.value); if (pSel && x && usable(x)) pSel.innerHTML = dPeriods(x.d).map((p) => `<option value="${esc(p.id)}">P${esc(p.num)} · ${esc(p.course)}</option>`).join(''); });
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const g = findGroup(f.dataset.key);
+      const uid = $('#scs-teacher').value, pid = $('#scs-period').value;
+      if (!g || !uid || !pid) return;
+      applyPlacements([{ first: g.first, last: g.last, parents: [...g.parents], group: g, places: [{ uid, pid }] }])
+        .then((res) => { toast({ kind: res.failed ? 'warn' : 'ok', text: res.failed ? 'Couldn’t add to that class' : 'Added to class', sub: res.failed ? res.errors[0] : fullName(g) }); refreshScDrawer(); });
+    });
+    const pf = $('#scp-form');
+    if (pf) pf.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const g = findGroup(pf.dataset.key);
+      if (!g) return;
+      const emails = parseEmails($('#scp-emails').value);
+      const err = $('#scp-err');
+      if (emails.bad.length) { err.textContent = `“${emails.bad[0]}” doesn’t look like an email address.`; err.hidden = false; return; }
+      const byT = new Map();
+      for (const { x, st } of g.entries) { const p = byT.get(x.uid) || {}; p[st.id] = { parents: emails.ok }; byT.set(x.uid, p); }
+      Promise.allSettled([...byT].map(([uid, patch]) => writeRoster(uid, patch))).then((rs) => {
+        const bad = rs.filter((r) => r.status === 'rejected');
+        toast(bad.length ? { kind: 'warn', text: 'Some classes weren’t updated', sub: schoolErrText(bad[0].reason, 'that change') } : { kind: 'ok', text: emails.ok.length ? 'Parent email saved' : 'Parent email removed', sub: fullName(g) });
+        refreshScDrawer();
+      });
+    });
+  }
+  function unplace(uid, sid, pid, key) {
+    const x = schoolPeople().find((p) => p.uid === uid);
+    const st = x && usable(x) ? x.d.students[sid] : null;
+    if (!st) return;
+    const p = x.d.periods[pid];
+    const rest = st.periods.filter((id) => id !== pid);
+    confirmBox({
+      title: `Remove ${st.first || 'this student'} from P${p ? p.num : ''}?`,
+      body: `${fullName(st)} will be taken off ${x.name}’s ${p ? `Period ${p.num} ${p.course}` : 'class'} roster. Their attendance already taken stays in ${x.you ? 'your' : `${x.name}’s`} records.`,
+      okLabel: 'Remove from class', danger: true,
+      onOk: () => {
+        writeRoster(uid, { [sid]: rest.length ? { periods: rest } : null })
+          .then(() => toast({ kind: 'info', text: 'Removed from class', sub: fullName(st) }))
+          .catch((e) => toast({ kind: 'warn', text: 'Couldn’t remove from class', sub: schoolErrText(e, 'that change') }));
+        if (key) setTimeout(() => openSchoolStudent(key), 0);
+      }
+    });
+  }
+
+  /* ----- Putting students in classes ----- */
+  // items: [{ first, last, parents, group (optional school group), places: [{ uid, pid }] }]
+  // Each student keeps one school key in every class, so one tag works in all of them. Returns counts.
+  async function applyPlacements(items) {
+    const groups = schoolStudents();
+    const byNk = new Map();
+    for (const g of groups) if (!byNk.has(g.nk)) byNk.set(g.nk, g);
+    const claimed = new Set();
+    const patches = new Map();   // uid -> { sid: changes }
+    // students: how many were placed; added: class spots filled; same: spots they already had.
+    const res = { students: 0, added: 0, same: 0, failed: 0, errors: [] };
+    const patchFor = (uid) => { if (!patches.has(uid)) patches.set(uid, {}); return patches.get(uid); };
+    const people = schoolPeople();
+    // Each roster indexed once by school key and by name, so big imports stay quick.
+    const index = new Map();
+    const rosterIndex = (x) => {
+      if (!index.has(x.uid)) {
+        const bySk = new Map(), byNk = new Map();
+        for (const st of Object.values(x.d.students)) {
+          if (st.sk) bySk.set(st.sk, st);
+          const k = nameKey(st.first, st.last);
+          byNk.set(k, [...(byNk.get(k) || []), st]);
+        }
+        index.set(x.uid, { bySk, byNk });
+      }
+      return index.get(x.uid);
+    };
+    for (const it of items) {
+      let g = it.group || byNk.get(nameKey(it.first, it.last)) || null;
+      if (g && !it.group && claimed.has(g.key)) g = null;   // another student in this list with the same name
+      if (g) claimed.add(g.key);
+      const sk = groupSk(g);
+      // Give the student's other classes the same school key, so a tag written anywhere works everywhere.
+      if (g) for (const { x, st } of g.entries) if (st.sk !== sk) patchFor(x.uid)[st.id] = { ...(patchFor(x.uid)[st.id] || {}), sk };
+      const byUid = new Map();
+      for (const pl of it.places) byUid.set(pl.uid, [...(byUid.get(pl.uid) || []), pl.pid]);
+      let placed = false;
+      for (const [uid, pids] of byUid) {
+        const x = people.find((p) => p.uid === uid);
+        if (!x || !usable(x)) { res.failed++; res.errors.push('That teacher’s classes aren’t available.'); continue; }
+        const ri = rosterIndex(x);
+        const ex = ri.bySk.get(sk) || (ri.byNk.get(nameKey(it.first, it.last)) || []).find((s) => !s.sk || s.sk === sk) || null;
+        const patch = patchFor(uid);
+        const valid = uniq(pids.filter((pid) => x.d.periods[pid]));
+        if (!valid.length) { res.failed++; res.errors.push('That class isn’t in TapRoll anymore.'); continue; }
+        placed = true;
+        if (ex) {
+          const fresh = valid.filter((pid) => !ex.periods.includes(pid));
+          const parents = uniq([...ex.parents, ...it.parents]).slice(0, 3);
+          const ch = { ...(patch[ex.id] || {}) };
+          if (fresh.length) ch.periods = [...ex.periods, ...fresh];
+          if (parents.length !== ex.parents.length) ch.parents = parents;
+          if (ex.sk !== sk) ch.sk = sk;
+          res.added += fresh.length; res.same += valid.length - fresh.length;
+          if (Object.keys(ch).length) patch[ex.id] = ch;
+        } else {
+          const rec = newStudentRec(it.first, it.last, valid, it.parents, sk);
+          patch[rec.id] = rec;
+          ri.bySk.set(sk, rec);
+          res.added += valid.length;
+        }
+      }
+      if (placed) res.students++;
+    }
+    const jobs = [...patches].map(([uid, patch]) => writeRoster(uid, patch).catch((e) => {
+      res.failed++; res.errors.push(schoolErrText(e, 'adding students'));
+    }));
+    await Promise.all(jobs);
+    return res;
+  }
+
+  function openSchoolAdd(uid, pid) {
+    const teachers = schoolPeople().filter((x) => usable(x) && dPeriods(x.d).length);
+    if (!teachers.length) { toast({ kind: 'info', text: 'No classes yet', sub: 'Teachers add their periods first. Then you can put students in them.' }); return; }
+    const pick = teachers.find((x) => x.uid === uid) || teachers[0];
+    const opts = (x) => dPeriods(x.d).map((p) => `<option value="${esc(p.id)}" ${p.id === pid ? 'selected' : ''}>P${esc(p.num)} · ${esc(p.course)}${p.room ? ` · Rm ${esc(p.room)}` : ''}</option>`).join('');
+    openModal(`${modalHead('Add students to a class', 'Paste names from a spreadsheet or type one per line.')}`
+      + `<form id="sca-form" class="m-body"><div class="grid2"><label class="field"><span>Teacher</span><select id="sca-teacher">${teachers.map((x) => `<option value="${esc(x.uid)}" ${x.uid === pick.uid ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`
+      + `<label class="field"><span>Class</span><select id="sca-period">${opts(pick)}</select></label></div>`
+      + `<label class="field"><span>Names</span><textarea id="sca-names" placeholder="Maya Lopez&#10;Nguyen, Kevin&#10;Jordan Brooks, jbrooks.parent@example.com"></textarea>`
+      + `<small>One student per line. “First Last” and “Last, First” both work. Add a parent’s email after a name to save it too. A student already in another class keeps the same tag.</small></label>`
+      + `<p class="m-text small err-text" id="sca-err" hidden></p>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="sc-import">${ic('sheet')} Import a spreadsheet instead</button><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">Add students</button></div></form>`, { label: 'Add students', focus: '#sca-names' });
+    const tSel = $('#sca-teacher');
+    tSel.addEventListener('change', () => { const x = teachers.find((t) => t.uid === tSel.value); $('#sca-period').innerHTML = x ? opts(x) : ''; });
+    $('#sca-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const names = parseNames($('#sca-names').value);
+      const tuid = tSel.value, tpid = $('#sca-period').value;
+      const err = $('#sca-err');
+      if (!names.length) { err.textContent = 'Type or paste at least one name.'; err.hidden = false; return; }
+      if (!tpid) { err.textContent = 'Pick a class.'; err.hidden = false; return; }
+      const x = teachers.find((t) => t.uid === tuid);
+      const p = x && x.d.periods[tpid];
+      const res = await applyPlacements(names.map((n) => ({ first: n.first, last: n.last, parents: n.parents, places: [{ uid: tuid, pid: tpid }] })));
+      closeModal();
+      const bad = names.reduce((s, n) => s + n.badEmails, 0);
+      toast({
+        kind: res.failed ? 'warn' : 'ok',
+        text: res.failed ? 'Some students weren’t added' : `Added ${plural(res.added, 'student')}`,
+        sub: res.failed ? res.errors[0] : `${x ? x.name : ''}${p ? ` · P${p.num} ${p.course}` : ''}${res.same ? ` · ${res.same} already there` : ''}${bad ? ` · ${plural(bad, 'parent email')} couldn’t be read` : ''}`
+      });
+    });
+  }
+
+  /* ----- Inviting and managing people ----- */
+  function inviteMessage(emails, role) {
+    const link = `${autoBase() || APP_URL}#school`;
+    const who = role === 'admin' ? 'an admin' : role === 'registrar' ? 'a registrar' : 'a teacher';
+    const subject = `Join ${School.name} on TapRoll`;
+    const body = ['Hello,', '', `I’ve invited you to join ${School.name} on TapRoll as ${who}. TapRoll takes attendance when students tap their NFC tags.`, '',
+      'To join:', `1. Open ${link}`,
+      `2. Sign in, or create a free account, with ${emails.length === 1 ? emails[0] : 'the email address this message was sent to'}.`,
+      '3. Confirm your email address if TapRoll asks, then choose Join.', '',
+      role === 'teacher' ? `Once you join, the ${School.name} office can see your classes and attendance and can add students to your class rosters.` : `Once you join, you’ll see attendance for every class at ${School.name} as it’s taken.`,
+      '', 'Thank you,', meName()].filter((l) => l !== null).join('\r\n');
+    return { subject, body };
+  }
+  function needsVerify() { return School.kind === 'cloud' && School.me && !School.me.verified; }
+  function verifyBlock(why) {
+    const email = School.me ? School.me.email : '';
+    return `<div class="opstatus info">${ic('mail')}<div class="op-body"><p>${School.verifySent ? `We sent a link to <b>${esc(email)}</b>. Open it, then come back and choose <b>I’ve confirmed it</b>.` : `First, confirm your email address, <b>${esc(email)}</b>. ${esc(why)}`}</p>`
+      + `<div class="row">${School.verifySent ? `<button type="button" class="btn sm primary" data-act="sc-verify-check">I’ve confirmed it</button><button type="button" class="btn sm" data-act="sc-verify-send">Send it again</button>` : `<button type="button" class="btn sm primary" data-act="sc-verify-send">Send confirmation email</button>`}</div></div></div>`;
+  }
+  function openInvite(done) {
+    if (!isStaff()) return;
+    ui.scPanel = false;
+    const roles = isAdmin() ? ['teacher', 'registrar', 'admin'] : ['teacher'];
+    if (needsVerify()) {
+      openModal(`${modalHead('Invite people')}<div class="m-body">${verifyBlock('Invites show who sent them, so people know they’re from you.')}</div>`, { label: 'Invite people', onClose: () => { ui.scInviteOpen = false; } });
+      ui.scInviteOpen = true;
+      return;
+    }
+    ui.scInviteOpen = false;
+    if (done) {
+      const groups = new Map();
+      for (const r of done.ok) groups.set(r.role, [...(groups.get(r.role) || []), r.email]);
+      const web = prefs.mailVia !== 'app';
+      const links = [...groups].map(([role, emails]) => { const m = inviteMessage(emails, role); return `<a class="btn ${groups.size === 1 ? 'primary' : ''}" href="${esc(composeUrl(emails, m.subject, m.body))}"${web ? ' target="_blank" rel="noopener"' : ''}>${ic('mail')} Email ${groups.size === 1 ? (emails.length === 1 ? 'the invite' : 'the invites') : `the ${ROLE_LABEL[role].toLowerCase()} invite${emails.length === 1 ? '' : 's'}`}</a>`; }).join('');
+      openModal(`${modalHead(done.ok.length ? `Invited ${plural(done.ok.length, 'person', 'people')}` : 'No one was invited')}<div class="m-body">`
+        + (done.ok.length ? `<p class="m-text">Each person signs in to TapRoll with the email you invited and chooses <b>Join</b>. TapRoll doesn’t send email itself, so let them know: this opens an email to them, already written, in your own email.</p>`
+          + `<div class="field"><span>Open emails in</span>${viaSeg()}</div><div class="row">${links}</div>` : '')
+        + (done.skipped.length ? `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p>${done.skipped.map((s) => `<b>${esc(s.email)}</b>: ${esc(s.why)}`).join('<br>')}</p></div></div>` : '')
+        + `</div><div class="m-foot"><button class="btn" data-act="sc-invite">Invite more</button><button class="btn primary" data-act="close-modal">Done</button></div>`, { label: 'Invited' });
+      return;
+    }
+    openModal(`${modalHead('Invite people', `They’ll join ${School.name} when they sign in with the email you invite.`)}`
+      + `<form id="sci-form" class="m-body"><label class="field"><span>Email addresses</span><textarea id="sci-emails" class="short" placeholder="jlee@school.org, mdiaz@school.org"></textarea><small>Separate addresses with commas or new lines. Up to 50 at a time.</small></label>`
+      + (roles.length > 1 ? `<fieldset class="reasons"><legend>Role</legend><div class="sc-roles">${roles.map((r, i) => `<label class="sc-rolepick"><input type="radio" name="sci-role" value="${r}" ${i === 0 ? 'checked' : ''}><span><b>${ROLE_LABEL[r]}</b><small>${esc(ROLE_NOTE[r])}</small></span></label>`).join('')}</div></fieldset>` : `<p class="m-text small">Registrars can invite teachers. Only admins can invite registrars and admins.</p>`)
+      + `<p class="m-text small">When a teacher joins, you can see their classes and attendance, and put students in their classes. They can leave the school anytime.</p>`
+      + `<p class="m-text small err-text" id="sci-err" hidden></p>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary" id="sci-go">Send invites</button></div></form>`, { label: 'Invite people', focus: '#sci-emails' });
+    $('#sci-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const picked = document.querySelector('input[name="sci-role"]:checked');
+      const role = picked ? picked.value : 'teacher';
+      const parts = $('#sci-emails').value.split(/[\s,;]+/).map(emailKey).filter(Boolean);
+      const err = $('#sci-err');
+      const bad = parts.filter((x) => !EMAIL_RE.test(x) || x.includes('/'));
+      if (!parts.length) { err.textContent = 'Type at least one email address.'; err.hidden = false; return; }
+      if (bad.length) { err.textContent = `“${bad[0]}” doesn’t look like an email address.`; err.hidden = false; return; }
+      const list = uniq(parts);
+      if (list.length > 50) { err.textContent = 'Invite up to 50 people at a time.'; err.hidden = false; return; }
+      const go = $('#sci-go'); go.disabled = true; go.innerHTML = `<span class="spin" aria-hidden="true"></span>Sending…`;
+      const memberEmails = new Set(Object.values(School.members).map((m) => emailKey(m.email)));
+      const ok = [], skipped = [];
+      for (const email of list) {
+        if (memberEmails.has(email)) { skipped.push({ email, why: `already part of ${School.name}` }); continue; }
+        try { await inviteOne(email, role); ok.push({ email, role }); }
+        catch (ex) {
+          const denied = String((ex && ex.code) || '').includes('permission-denied');
+          skipped.push({ email, why: denied ? 'they may already have an invite from another school, or your Firestore rules need updating' : 'couldn’t send the invite. Try again.' });
+        }
+      }
+      schoolChanged();
+      openInvite({ ok, skipped });
+    });
+  }
+  function openMember(uid) {
+    const x = schoolPeople().find((p) => p.uid === uid);
+    if (!x || !canManage(x)) return;
+    const roles = ['teacher', 'registrar', 'admin'];
+    openModal(`${modalHead(x.name, x.email)}<div class="m-body">`
+      + (isAdmin() ? `<fieldset class="reasons"><legend>Role</legend><div class="sc-roles">${roles.map((r) => `<label class="sc-rolepick"><input type="radio" name="scm-role" value="${r}" ${x.role === r ? 'checked' : ''}><span><b>${ROLE_LABEL[r]}</b><small>${esc(ROLE_NOTE[r])}</small></span></label>`).join('')}</div></fieldset>` : '')
+      + `<p class="m-text small">Removing ${esc(x.name)} from ${esc(School.name)} stops the school office from seeing their classes. Their classes and students stay in their account.</p></div>`
+      + `<div class="m-foot"><button class="btn danger spacer" id="scm-remove">${ic('trash')} Remove from school</button><button class="btn" data-act="close-modal">Cancel</button>${isAdmin() ? '<button class="btn primary" id="scm-save">Save</button>' : ''}</div>`, { label: 'Manage member' });
+    const save = $('#scm-save');
+    if (save) save.addEventListener('click', async () => {
+      const r = (document.querySelector('input[name="scm-role"]:checked') || {}).value;
+      if (!r || r === x.role) { closeModal(); return; }
+      try { await setMemberRole(uid, r); closeModal(); toast({ kind: 'ok', text: `${x.name} is now ${r === 'admin' ? 'an' : 'a'} ${ROLE_LABEL[r].toLowerCase()}` }); schoolChanged(); }
+      catch (e) { toast({ kind: 'warn', text: 'Couldn’t change the role', sub: schoolErrText(e, 'that change') }); }
+    });
+    $('#scm-remove').addEventListener('click', () => {
+      confirmBox({
+        title: `Remove ${x.name}?`, body: `${x.name} won’t be part of ${School.name} anymore, and the school office won’t see their classes. Their classes and students stay in their account. You can invite them again later.`,
+        okLabel: 'Remove from school', danger: true,
+        onOk: async () => {
+          try { await removeMember(uid); toast({ kind: 'info', text: `${x.name} removed`, sub: School.name }); schoolChanged(); }
+          catch (e) { toast({ kind: 'warn', text: 'Couldn’t remove them', sub: schoolErrText(e, 'removing them') }); }
+        }
+      });
+    });
+  }
+
+  /* ----- Your school (teachers and new accounts) ----- */
+  function schoolSectionInner() {
+    if (Session.kind === 'demo') {
+      return `<div class="sc-card">${ic('school')}<div><b>${esc(School.name || 'Harbor View High')}</b><span>Example school · you’re an admin</span></div></div>`
+        + `<p class="m-text small">The example classroom belongs to a made-up school. Open the School office to see what admins and registrars see: every class live, and tools to put students in classes.</p>`
+        + `<div class="row"><button type="button" class="btn" data-act="open-school">${ic('school')} Open School office</button></div>`;
+    }
+    if (Session.kind !== 'cloud') {
+      return `<p class="m-text small">Schools link teachers so the school office can see every class live and add students to them. They need cloud sign-in, which works across devices.</p>`
+        + `<div class="row"><button type="button" class="btn" data-act="setup-guide">Set up cloud sign-in</button></div>`;
+    }
+    if (School.state === 'loading') return '<p class="m-text small">Checking your school…</p>';
+    if (School.state === 'error') {
+      return `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p>TapRoll couldn’t open your school. If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.</p><div class="row"><button type="button" class="btn sm" data-act="setup-guide">Setup guide</button></div></div></div>`;
+    }
+    if (School.state === 'member') {
+      const staff = isStaffRole(School.role), owner = School.owner === meUid();
+      const text = staff
+        ? `You can see every class at ${School.name} as attendance is taken, put students in classes, and invite ${School.role === 'admin' ? 'people' : 'teachers'}.`
+        : `${School.name}’s admins and registrars can see your classes and attendance, and can add students to your classes. You can leave the school anytime.`;
+      return `<div class="sc-card">${ic('school')}<div><b>${esc(School.name || 'Your school')}</b><span>${esc(ROLE_LABEL[School.role])}${owner ? ' · you set it up' : ''}</span></div></div>`
+        + `<p class="m-text small">${esc(text)}</p><div class="row">${staff ? `<button type="button" class="btn" data-act="open-school">${ic('school')} Open School office</button>` : ''}`
+        + `${School.role === 'admin' ? `<button type="button" class="btn" data-act="sc-rename">${ic('edit')} Rename school</button>` : ''}`
+        + `${owner ? '' : `<button type="button" class="btn ghost danger" data-act="sc-leave">Leave school</button>`}</div>`
+        + (owner ? '<p class="m-text small">You set up this school, so you stay its admin. To hand it to someone else, email us.</p>' : '');
+    }
+    let out = '';
+    const inv = School.invite;
+    if (inv) {
+      out += `<div class="sc-invite"><div class="sc-card">${ic('school')}<div><b>${esc(inv.school || 'A school')}</b><span>Invited you as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}</span></div></div>`
+        + `<p class="m-text small">Sent by ${esc(inv.byName || 'the school office')}${inv.byEmail ? ` (${esc(inv.byEmail)})` : ''}. ${inv.role === 'teacher'
+          ? `When you join, ${esc(inv.school || 'the school')}’s admins and registrars can see your classes and attendance, and can add students to your classes.`
+          : `When you join, you’ll see attendance for every class at ${esc(inv.school || 'the school')}.`} Only join a school you work for.</p>`
+        + `<div class="row"><button type="button" class="btn primary" data-act="sc-join">Join ${esc(inv.school || 'school')}</button><button type="button" class="btn" data-act="sc-decline">Decline</button></div></div>`;
+    } else if (School.inviteState === 'unverified') {
+      out += verifyBlock('Then any invite from your school shows up here.');
+    } else if (School.inviteState === 'denied' || School.inviteState === 'error') {
+      out += `<p class="m-text small">TapRoll couldn’t check for school invites. If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.</p>`;
+    } else if (School.inviteState === 'checking') out += '<p class="m-text small">Checking for invites…</p>';
+    else out += `<p class="m-text small">You’re not part of a school. When your school’s admin or registrar invites <b>${esc(School.me ? School.me.email : '')}</b>, the invite shows up here.</p>`;
+    out += `<p class="m-text small sc-setup">Run a school office? <button type="button" class="linkbtn" data-act="sc-create">Set up your school</button></p>`;
+    return out;
+  }
+  const schoolSettingsSection = () => `<section class="dsec" aria-label="School"><h3>School</h3><div class="m-body" id="school-sec">${schoolSectionInner()}</div></section>`;
+  function openSchoolPanel() {
+    if (isStaff()) { openSchoolView(); return; }
+    ui.scPanel = true;
+    if (School.kind === 'cloud' && School.state === 'none' && School.inviteState !== 'checking' && School.inviteState !== 'unverified') checkInvite();
+    openModal(`${modalHead('Your school')}<div class="m-body" id="school-panel">${schoolSectionInner()}</div>`, { label: 'Your school', onClose: () => { ui.scPanel = false; } });
+  }
+  function refreshSchoolPanel() { const el = $('#school-panel'); if (el) el.innerHTML = schoolSectionInner(); }
+  function openSchoolCreate() {
+    if (Session.kind !== 'cloud') return;
+    ui.scPanel = false;
+    if (School.state === 'member' && School.owner === meUid()) { toast({ kind: 'info', text: `You already run ${School.name}` }); return; }
+    const leaving = School.state === 'member' ? School.name : '';
+    openModal(`${modalHead('Set up your school', 'You’ll be its admin. Then invite your registrar and teachers.')}`
+      + `<form id="scn-form" class="m-body"><label class="field"><span>School name</span><input id="scn-name" maxlength="80" autocomplete="organization" value="${esc(S.settings.school || '')}" placeholder="Harbor View High"></label>`
+      + `<label class="check fit sc-auth"><input type="checkbox" id="scn-ok"> I work for this school and can set it up in TapRoll</label>`
+      + (leaving ? `<p class="m-text small">You’ll leave ${esc(leaving)} when you set up a new school.</p>` : '')
+      + `<p class="m-text small err-text" id="scn-err" hidden></p>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary" id="scn-go">Set up school</button></div></form>`, { label: 'Set up your school', focus: '#scn-name' });
+    $('#scn-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = $('#scn-name').value.trim();
+      const err = $('#scn-err');
+      if (!name) { err.textContent = 'Enter your school’s name.'; err.hidden = false; return; }
+      if (!$('#scn-ok').checked) { err.textContent = 'Confirm that you work for this school.'; err.hidden = false; return; }
+      const go = $('#scn-go'); go.disabled = true; go.innerHTML = '<span class="spin" aria-hidden="true"></span>Setting up…';
+      pendingSchoolLink = true;
+      try {
+        await createSchool(name);
+        closeModal();
+        toast({ kind: 'ok', text: `${name} is set up`, sub: 'Next, invite your registrar and teachers.' });
+      } catch (ex) {
+        pendingSchoolLink = false;
+        go.disabled = false; go.textContent = 'Set up school';
+        err.textContent = schoolErrText(ex, 'setting up the school'); err.hidden = false;
+      }
+    });
+  }
+  function openRename() {
+    if (!isAdmin()) return;
+    openModal(`${modalHead('Rename school', 'Everyone in the school sees the new name.')}<form id="scr-form" class="m-body">`
+      + `<label class="field"><span>School name</span><input id="scr-name" maxlength="80" autocomplete="organization" value="${esc(School.name)}"></label>`
+      + `<p class="m-text small err-text" id="scr-err" hidden></p>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">Save</button></div></form>`, { label: 'Rename school', focus: '#scr-name' });
+    $('#scr-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = $('#scr-name').value.trim();
+      const err = $('#scr-err');
+      if (!name) { err.textContent = 'Enter your school’s name.'; err.hidden = false; return; }
+      try { await renameSchool(name); closeModal(); toast({ kind: 'ok', text: 'School renamed', sub: name }); schoolChanged(); }
+      catch (ex) { err.textContent = schoolErrText(ex, 'renaming the school'); err.hidden = false; }
+    });
+  }
+  // After signing up as a school admin or registrar.
+  function openOfficeStart() {
+    openModal(`${modalHead('Welcome to the school office', 'Start a school in TapRoll, or join the one that invited you.')}<div class="m-body sc-start">`
+      + `<button type="button" class="demo-btn" data-act="sc-create">${ic('school')}<span><b>Set up a school</b><small>You’ll be its admin and invite your registrar and teachers.</small></span>${ic('chevron')}</button>`
+      + `<button type="button" class="demo-btn" data-act="sc-panel">${ic('mail')}<span><b>I was invited</b><small>Join with the email address your school invited.</small></span>${ic('chevron')}</button>`
+      + `</div>`, { label: 'School office' });
+  }
+
+  /* ----- School attendance as a spreadsheet ----- */
+  function exportSchoolCsv() {
+    const rows = [['Date', 'Teacher', 'Period', 'Course', 'Last name', 'First name', 'Status', 'Time', 'How', 'Note']];
+    for (const x of schoolPeople()) {
+      if (!usable(x)) continue;
+      for (const p of dPeriods(x.d)) {
+        const m = (x.d.day || {})[p.id] || {};
+        for (const st of dRoster(x.d, p.id)) {
+          const mk = m[st.id];
+          rows.push([School.date, x.name, p.num, p.course, st.last, st.first, mk ? markLabel(mk) : 'Not marked', mk ? fmtClock(mk.t) : '', mk ? (METHOD[mk.m] || mk.m) : '', mk && mk.why ? mk.why : '']);
+        }
+      }
+    }
+    if (rows.length === 1) { toast({ kind: 'info', text: 'Nothing to download yet', sub: 'Classes appear here once teachers add them.' }); return; }
+    const slug = normKey(School.name).replace(/ /g, '-') || 'school';
+    saveFile(`${slug}-attendance-${School.date}.csv`, toCsv(rows));
+  }
+
+  /* ============================== Spreadsheet import ==============================
+     One row per student per class. Columns are matched by their names (Teacher, Period, First name, and so on),
+     and can be changed before anything is added. Nothing is saved until the office reviews the plan. */
+  const IMPORT_FIELDS = [
+    ['first', 'Student first name'], ['last', 'Student last name'], ['full', 'Student full name'],
+    ['teacher', 'Teacher (name or email)'], ['period', 'Period'], ['course', 'Course'],
+    ['parent', 'Parent email'], ['parent2', 'Second parent email'], ['sid', 'Student ID']
+  ];
+  const IMPORT_GUESS = {
+    first: /^(student\s*)?(first|given|preferred\s*first)(\s*name)?$|^f\s*name$/,
+    last: /^(student\s*)?(last|family|sur)(\s*name)?$|^surname$|^l\s*name$/,
+    full: /^(student|student\s*name|name|full\s*name|student\s*full\s*name|last\s*first(\s*name)?|last\s*name\s*first\s*name|pupil)$/,
+    teacher: /^(teacher|instructor|staff|educator)(\s*(name|email|e\s*mail|of\s*record|full\s*name))?$/,
+    period: /^(period|per|pd|prd|block|period\s*block|class\s*period|bell|period\s*number|period\s*no|sched\s*period)$/,
+    course: /^(course|class|subject|section)(\s*(name|title|description|desc))?$/,
+    parent: /(parent|guardian|family|contact|mother|father|home).*(email|e\s*mail)|(email|e\s*mail).*(parent|guardian)/,
+    sid: /^(student\s*)?(id|number|no|num)(\s*(number|no|num))?$|^perm(\s*id)?$|^(ssid|sis\s*id|local\s*id|student\s*id\s*number)$/
+  };
+  const hdrKey = (h) => String(h || '').toLowerCase().replace(/[#._:*()/\\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const colLetter = (i) => { let s = ''; let n = i + 1; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; };
+  function guessMap(header) {
+    const map = {};
+    const used = new Set();
+    for (const [f] of IMPORT_FIELDS) {
+      if (f === 'parent2') continue;
+      const i = header.findIndex((h, k) => !used.has(k) && IMPORT_GUESS[f].test(hdrKey(h)));
+      if (i >= 0) { map[f] = i; used.add(i); if (f === 'parent') { const j = header.findIndex((h, k) => !used.has(k) && IMPORT_GUESS.parent.test(hdrKey(h))); if (j >= 0) { map.parent2 = j; used.add(j); } } }
+    }
+    if (map.first != null && map.last != null) delete map.full;
+    return map;
+  }
+  // The header row: the one among the first few that names the most known columns.
+  function findHeader(rows) {
+    let best = { at: -1, score: 0 };
+    rows.slice(0, 10).forEach((r, i) => {
+      const score = Object.keys(guessMap(r)).length;
+      if (score > best.score) best = { at: i, score };
+    });
+    return best.score >= 2 ? best.at : -1;
+  }
+  function splitName(full) {
+    const s = String(full || '').replace(/\s+/g, ' ').trim();
+    if (s.includes(',')) { const i = s.indexOf(','); return { first: s.slice(i + 1).trim(), last: s.slice(0, i).trim() }; }
+    const parts = s.split(' ');
+    return parts.length > 1 ? { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] } : { first: s, last: '' };
+  }
+  function personParts(n) {
+    const s = bareName(n);
+    if (s.includes(',')) { const i = s.indexOf(','); return { first: s.slice(i + 1).trim(), last: s.slice(0, i).trim() }; }
+    const parts = s.split(/\s+/).filter(Boolean);
+    return parts.length > 1 ? { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] } : { first: '', last: parts[0] || '' };
+  }
+  // Finds a teacher by email, full name ("Jane Lee", "Lee, Jane") or last name ("Ms. Lee") when only one fits.
+  function teacherIndex() {
+    const people = schoolPeople().filter((x) => x.role === 'teacher' || (usable(x) && dPeriods(x.d).length));
+    const byEmail = new Map(), byFull = new Map(), byLast = new Map();
+    const add = (map, k, x) => { if (!k) return; const cur = map.get(k); if (cur === undefined) map.set(k, x); else if (cur && cur.uid !== x.uid) map.set(k, null); };
+    for (const x of people) {
+      if (x.email) add(byEmail, emailKey(x.email), x);
+      const prof = x.d && x.d.profile;
+      const names = uniq([x.name, x.m.name, prof && prof.teacher, prof && prof.name].filter(Boolean));
+      for (const n of names) {
+        const pp = personParts(n);
+        if (pp.first) { add(byFull, normKey(`${pp.first} ${pp.last}`), x); add(byFull, normKey(`${pp.last} ${pp.first}`), x); }
+        add(byLast, normKey(pp.last), x);
+      }
+    }
+    return (val) => {
+      const v = String(val || '').trim();
+      if (!v) return { err: 'blank' };
+      if (v.includes('@')) { const x = byEmail.get(emailKey(v)); return x ? { x } : { err: 'unknown' }; }
+      const pp = personParts(v);
+      const full = pp.first ? byFull.get(normKey(`${pp.first} ${pp.last}`)) : undefined;
+      if (full) return { x: full };
+      const last = byLast.get(normKey(pp.last));
+      if (last) return { x: last };
+      return { err: full === null || last === null ? 'ambiguous' : 'unknown' };
+    };
+  }
+  function periodNum(v) {
+    const s = String(v || '').trim().toLowerCase();
+    if (!s) return null;
+    const m = /^(?:p|per|pd|prd|period|block|blk)?\s*\.?\s*#?\s*0*(\d{1,2})(?:st|nd|rd|th)?(?!\d)/.exec(s) || /(?:period|per|pd|block)\s*#?\s*0*(\d{1,2})(?!\d)/.exec(s);
+    return m ? Number(m[1]) : null;
+  }
+  const courseMatch = (p, v) => { const a = normKey(p.course), b = normKey(v); return !!a && !!b && (a === b || a.includes(b) || b.includes(a)); };
+  function matchPeriod(d, perVal, courseVal) {
+    const list = dPeriods(d);
+    const num = periodNum(perVal);
+    let c;
+    if (num != null) c = list.filter((p) => p.num === num);
+    else if (perVal) c = list.filter((p) => courseMatch(p, perVal));
+    else c = list;
+    if (c.length > 1 && courseVal) { const f = c.filter((p) => courseMatch(p, courseVal)); if (f.length) c = f; }
+    if (!perVal && !courseVal) return { err: 'blank' };
+    return c.length === 1 ? { p: c[0] } : { err: c.length ? 'ambiguous' : 'missing', num };
+  }
+
+  const imp = { step: 'pick', sheets: [], sheet: 0, header: -1, hasHeader: true, map: {}, one: { uid: '', pid: '' }, file: '', plan: null, result: null, busy: false };
+  function openImport() {
+    if (!isStaff()) return;
+    Object.assign(imp, { step: 'pick', sheets: [], sheet: 0, header: -1, hasHeader: true, map: {}, one: { uid: '', pid: '' }, file: '', plan: null, result: null, busy: false });
+    renderImport(true);
+  }
+  function renderImport(fresh) {
+    const html = imp.step === 'pick' ? importPickHtml() : imp.step === 'done' ? importDoneHtml() : importMapHtml();
+    const box = $('#modal-root .modal');
+    if (!fresh && box && ui.impOpen) { box.innerHTML = html; } else { openModal(html, { cls: 'wide', label: 'Import students', onClose: () => { ui.impOpen = false; } }); ui.impOpen = true; }
+    bindImport();
+  }
+  function importPickHtml() {
+    return `${modalHead('Import students', `Add students to classes across ${School.name} from a spreadsheet.`)}<div class="m-body">`
+      + `<label class="drop" id="imp-drop" for="imp-file">${ic('sheet')}<b>Choose a spreadsheet</b><span>Excel (.xlsx) or CSV, with one row for each student in each class. You can also drop the file here.</span></label>`
+      + `<input type="file" id="imp-file" accept=".xlsx,.xlsm,.csv,.tsv,.txt,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>`
+      + `<div class="or" role="presentation"><span>or</span></div>`
+      + `<label class="field"><span>Paste cells from a spreadsheet</span><textarea id="imp-paste" class="short" placeholder="Select the cells in Excel or Google Sheets, including the header row, then copy and paste them here."></textarea></label>`
+      + `<details class="tip"><summary>Which columns to include</summary><ul>`
+      + `<li><b>Student name:</b> First name and Last name columns, or one Name column.</li>`
+      + `<li><b>Teacher:</b> the teacher’s name or the email they use for TapRoll.</li>`
+      + `<li><b>Period:</b> the class period number, like 3 or P3. A Course column helps when a teacher has two classes in one period.</li>`
+      + `<li><b>Parent email</b> (optional): one or two columns.</li>`
+      + `<li><b>Student ID</b> (optional): only used to tell apart students with the same name. TapRoll doesn’t save it.</li>`
+      + `<li>No Teacher or Period column? You can put everyone in one class on the next step.</li></ul></details>`
+      + `<p class="m-text small err-text" id="imp-err" role="alert" hidden></p></div>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="button" class="btn primary" id="imp-paste-go">Continue with pasted cells</button></div>`;
+  }
+  function importRows() {
+    const sh = imp.sheets[imp.sheet];
+    if (!sh) return { header: [], rows: [] };
+    const width = sh.rows.reduce((m, r) => Math.max(m, r.length), 0);
+    const hdr = imp.hasHeader && imp.header >= 0 ? sh.rows[imp.header] : [];
+    const header = Array.from({ length: width }, (_, i) => (hdr[i] || '').trim() || `Column ${colLetter(i)}`);
+    return { header, rows: sh.rows.slice(imp.hasHeader && imp.header >= 0 ? imp.header + 1 : 0) };
+  }
+  function selectSheet(i) {
+    imp.sheet = i;
+    const sh = imp.sheets[i];
+    imp.header = findHeader(sh.rows);
+    imp.hasHeader = imp.header >= 0;
+    imp.map = imp.hasHeader ? guessMap(sh.rows[imp.header]) : {};
+    imp.step = 'map';
+  }
+  function buildPlan() {
+    const { rows } = importRows();
+    const col = (r, f) => (imp.map[f] != null && imp.map[f] >= 0 ? String(r[imp.map[f]] || '').trim() : '');
+    const findT = teacherIndex();
+    const people = schoolPeople();
+    const plan = { rows: rows.length, students: new Map(), places: 0, byTeacher: new Map(), problems: new Map(), skipped: [], preview: [] };
+    const problem = (key, text, r) => { const p = plan.problems.get(key) || { text, n: 0 }; p.n++; plan.problems.set(key, p); plan.skipped.push({ r, why: text }); return text; };
+    const oneT = people.find((x) => x.uid === imp.one.uid);
+    const inClass = new Map();   // teacher uid -> Set of "class id|name" already on the roster
+    const seated = (x, pid, first, last) => {
+      if (!inClass.has(x.uid)) {
+        const set = new Set();
+        for (const st of Object.values(x.d.students)) { const k = nameKey(st.first, st.last); for (const p of st.periods) set.add(`${p}|${k}`); }
+        inClass.set(x.uid, set);
+      }
+      return inClass.get(x.uid).has(`${pid}|${nameKey(first, last)}`);
+    };
+    for (const r of rows) {
+      let first = col(r, 'first'), last = col(r, 'last');
+      if (!first && !last) { const full = col(r, 'full'); if (full) ({ first, last } = splitName(full)); }
+      first = first.slice(0, 40); last = last.slice(0, 40);
+      const show = { name: `${first} ${last}`.trim(), teacher: '', cls: '', note: '' };
+      if (plan.preview.length < 6) plan.preview.push(show);
+      if (!first && !last) { show.note = problem('noname', 'No student name', r); continue; }
+      let x = null;
+      if (imp.map.teacher != null) {
+        const tv = col(r, 'teacher');
+        const m = findT(tv);
+        if (m.err === 'blank') { show.note = problem('noteacher', 'No teacher listed', r); continue; }
+        if (m.err) { show.note = problem(`t:${normKey(tv)}`, m.err === 'ambiguous' ? `More than one teacher matches “${tv}”` : `No teacher “${tv}” at ${School.name}`, r); continue; }
+        x = m.x;
+      } else {
+        if (!oneT) { show.note = problem('pickt', 'Choose a teacher below', r); continue; }
+        x = oneT;
+      }
+      show.teacher = x.name;
+      if (!usable(x)) { show.note = problem(`load:${x.uid}`, `${x.name}’s classes aren’t loaded yet`, r); continue; }
+      let p = null;
+      if (imp.map.period != null || imp.map.course != null) {
+        const pv = col(r, 'period'), cv = col(r, 'course');
+        const m = matchPeriod(x.d, pv, cv);
+        if (m.err === 'blank') { show.note = problem('noperiod', 'No period listed', r); continue; }
+        if (m.err) {
+          const what = pv ? `Period ${m.num != null ? m.num : pv}` : `a ${cv} class`;
+          show.note = problem(`p:${x.uid}:${normKey(pv)}:${normKey(cv)}`, m.err === 'ambiguous' ? `${x.name} has more than one class that fits ${what}${cv ? '' : '. Add a Course column'}` : `${x.name} has no ${what} in TapRoll yet`, r);
+          continue;
+        }
+        p = m.p;
+      } else {
+        p = x.uid === imp.one.uid ? x.d.periods[imp.one.pid] : null;
+        if (!p) { show.note = problem('pickp', 'Choose a class below', r); continue; }
+      }
+      show.cls = `P${p.num} ${p.course}`;
+      const sidv = col(r, 'sid');
+      const key = sidv ? `id:${sidv}` : `n:${nameKey(first, last)}`;
+      let s = plan.students.get(key);
+      if (!s) { s = { first, last, parents: new Set(), places: [] }; plan.students.set(key, s); }
+      parseEmails(`${col(r, 'parent')} ${col(r, 'parent2')}`).ok.forEach((e) => s.parents.add(e));
+      if (!s.places.some((q) => q.uid === x.uid && q.pid === p.id)) {
+        s.places.push({ uid: x.uid, pid: p.id });
+        plan.places++;
+        const tb = plan.byTeacher.get(x.uid) || { x, per: new Map() };
+        const cur = tb.per.get(p.id) || { p, n: 0, fresh: 0 };
+        cur.n++;
+        if (!seated(x, p.id, first, last)) cur.fresh++;
+        tb.per.set(p.id, cur);
+        plan.byTeacher.set(x.uid, tb);
+      }
+    }
+    return plan;
+  }
+  function importMapHtml() {
+    const sh = imp.sheets[imp.sheet];
+    const { header, rows } = importRows();
+    const plan = imp.plan = buildPlan();
+    const opt = (f) => `<option value="-1">Not in this file</option>${header.map((h, i) => `<option value="${i}" ${imp.map[f] === i ? 'selected' : ''}>${esc(h)}</option>`).join('')}`;
+    const people = schoolPeople().filter((x) => usable(x) && dPeriods(x.d).length);
+    const needOne = imp.map.teacher == null || (imp.map.period == null && imp.map.course == null);
+    const oneT = people.find((x) => x.uid === imp.one.uid);
+    const one = needOne ? `<div class="imp-one"><p class="m-text small">${imp.map.teacher == null ? 'This file has no Teacher column, so put everyone in one class:' : 'This file has no Period or Course column, so choose the class:'}</p><div class="grid2">`
+      + `<label class="field"><span>Teacher</span><select id="imp-one-t"><option value="">Choose a teacher</option>${people.map((x) => `<option value="${esc(x.uid)}" ${x.uid === imp.one.uid ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`
+      + `<label class="field"><span>Class</span><select id="imp-one-p"><option value="">Choose a class</option>${oneT ? dPeriods(oneT.d).map((p) => `<option value="${esc(p.id)}" ${p.id === imp.one.pid ? 'selected' : ''}>P${esc(p.num)} · ${esc(p.course)}</option>`).join('') : ''}</select></label></div></div>` : '';
+    const nStu = plan.students.size;
+    const tList = [...plan.byTeacher.values()].sort((a, b) => sortName(a.x.name, b.x.name));
+    const sum = `<div class="imp-sum"><div><b>${fmtCount(nStu)}</b><span>${nStu === 1 ? 'student' : 'students'}</span></div><div><b>${fmtCount(plan.places)}</b><span>class spots</span></div><div><b>${tList.length}</b><span>${tList.length === 1 ? 'teacher' : 'teachers'}</span></div><div class="${plan.skipped.length ? 'warn' : ''}"><b>${fmtCount(plan.skipped.length)}</b><span>rows skipped</span></div></div>`;
+    const tHtml = tList.length ? `<ul class="imp-teachers">${tList.map((tb) => `<li><b>${esc(tb.x.name)}</b><span>${[...tb.per.values()].sort((a, b) => a.p.num - b.p.num).map((c) => `P${esc(c.p.num)} ${esc(c.p.course)}: ${c.n}${c.fresh < c.n ? ` (${c.n - c.fresh} already there)` : ''}`).join(' · ')}</span></li>`).join('')}</ul>` : '';
+    const probs = [...plan.problems.values()].sort((a, b) => b.n - a.n);
+    const pHtml = probs.length ? `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p><b>Some rows will be skipped.</b> Fix them in the file and import it again, or add those students by hand.</p><ul class="imp-probs">${probs.slice(0, 8).map((p) => `<li>${esc(p.text)} <span>${plural(p.n, 'row')}</span></li>`).join('')}${probs.length > 8 ? `<li>And ${probs.length - 8} more kinds of problems.</li>` : ''}</ul></div></div>` : '';
+    const prev = plan.preview.length ? `<div class="imp-prev"><table><thead><tr><th>Student</th><th>Teacher</th><th>Class</th></tr></thead><tbody>${plan.preview.map((r) => `<tr><td>${esc(r.name || '(no name)')}</td><td>${esc(r.teacher || '')}</td><td>${r.note ? `<span class="imp-skip">${esc(r.note)}</span>` : esc(r.cls)}</td></tr>`).join('')}</tbody></table><p class="m-text small">The first rows, as TapRoll reads them.</p></div>` : '';
+    return `${modalHead('Check the columns', `${imp.file || sh.name} · ${plural(rows.length, 'row')}`)}<div class="m-body">`
+      + (imp.sheets.length > 1 ? `<label class="field"><span>Sheet</span><select id="imp-sheet">${imp.sheets.map((s, i) => `<option value="${i}" ${i === imp.sheet ? 'selected' : ''}>${esc(s.name)} (${plural(s.rows.length, 'row')})</option>`).join('')}</select></label>` : '')
+      + `<label class="check fit"><input type="checkbox" id="imp-hdr" ${imp.hasHeader && imp.header >= 0 ? 'checked' : ''}> ${imp.hasHeader && imp.header >= 0 ? `Row ${imp.header + 1} has the column names` : 'The file has a row of column names'}</label>`
+      + `<div class="imp-map">${IMPORT_FIELDS.map(([f, l]) => `<label class="field"><span>${esc(l)}</span><select data-f="${f}">${opt(f)}</select></label>`).join('')}</div>`
+      + one + sum + tHtml + pHtml + prev
+      + `<p class="m-text small">Students already in a class aren’t added twice. A student in several classes gets one tag code for all of them.</p>`
+      + `<p class="m-text small err-text" id="imp-err" role="alert" hidden></p></div>`
+      + `<div class="m-foot"><button type="button" class="btn spacer" id="imp-back">Back</button><button type="button" class="btn" data-act="close-modal">Cancel</button>`
+      + `<button type="button" class="btn primary" id="imp-go" ${plan.places ? '' : 'disabled'}>${plan.places ? `Add ${plural(nStu, 'student')}` : 'Nothing to add yet'}</button></div>`;
+  }
+  function importDoneHtml() {
+    const r = imp.result || { students: 0, added: 0, same: 0, failed: 0, errors: [] };
+    const skipped = imp.plan ? imp.plan.skipped.length : 0;
+    return `${modalHead(r.failed ? 'Import finished with problems' : 'Students imported')}<div class="m-body">`
+      + `<div class="imp-sum"><div><b>${fmtCount(r.students)}</b><span>${r.students === 1 ? 'student' : 'students'}</span></div><div><b>${fmtCount(r.added)}</b><span>${r.added === 1 ? 'class spot' : 'class spots'} added</span></div><div><b>${fmtCount(r.same)}</b><span>already there</span></div><div class="${skipped ? 'warn' : ''}"><b>${fmtCount(skipped)}</b><span>rows skipped</span></div></div>`
+      + (r.failed ? `<div class="opstatus err">${ic('alert')}<p>${esc(r.errors[0] || 'Some classes weren’t updated.')}</p></div>` : '')
+      + `<p class="m-text">Teachers see their new students right away. Each student’s tag can be written in any of their classes.</p>`
+      + (skipped ? `<p class="m-text small">Download the skipped rows, fix them, and import that file to add the rest.</p>` : '')
+      + `</div><div class="m-foot">${skipped ? `<button type="button" class="btn spacer" id="imp-skipped">${ic('download')} Skipped rows (CSV)</button>` : ''}<button type="button" class="btn" data-act="sc-import">Import another file</button><button type="button" class="btn primary" data-act="close-modal">Done</button></div>`;
+  }
+  function bindImport() {
+    const err = (msg) => { const el = $('#imp-err'); if (el) { el.textContent = msg; el.hidden = false; } };
+    const file = $('#imp-file');
+    const loadFile = async (f) => {
+      if (!f) return;
+      try {
+        const sheets = await readSpreadsheet(f);
+        const usableSheets = sheets.filter((s) => s.rows.length);
+        if (!usableSheets.length) { err('That file looks empty.'); return; }
+        imp.sheets = usableSheets; imp.file = f.name || '';
+        selectSheet(0);
+        renderImport();
+      } catch (e) { err(sheetErrorText(e)); }
+    };
+    if (file) file.addEventListener('change', () => { loadFile(file.files && file.files[0]); file.value = ''; });
+    const drop = $('#imp-drop');
+    if (drop) {
+      drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+      drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); loadFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
+    }
+    const pasteGo = $('#imp-paste-go');
+    if (pasteGo) pasteGo.addEventListener('click', () => {
+      const rows = parseDelimited($('#imp-paste').value);
+      if (!rows.length) { err('Choose a file, or paste cells from a spreadsheet first.'); return; }
+      imp.sheets = [{ name: 'Pasted cells', rows }]; imp.file = 'Pasted cells';
+      selectSheet(0);
+      renderImport();
+    });
+    const sheetSel = $('#imp-sheet');
+    if (sheetSel) sheetSel.addEventListener('change', () => { selectSheet(Number(sheetSel.value)); renderImport(); });
+    const hdr = $('#imp-hdr');
+    if (hdr) hdr.addEventListener('change', () => {
+      const sh = imp.sheets[imp.sheet];
+      if (hdr.checked) { imp.header = Math.max(0, findHeader(sh.rows)); imp.hasHeader = true; imp.map = guessMap(sh.rows[imp.header]); }
+      else { imp.hasHeader = false; imp.header = -1; }
+      renderImport();
+    });
+    document.querySelectorAll('#modal-root .imp-map select').forEach((s) => s.addEventListener('change', () => {
+      const v = Number(s.value);
+      if (v >= 0) { for (const k of Object.keys(imp.map)) if (imp.map[k] === v) delete imp.map[k]; imp.map[s.dataset.f] = v; }
+      else delete imp.map[s.dataset.f];
+      renderImport();
+    }));
+    const ot = $('#imp-one-t'), op = $('#imp-one-p');
+    if (ot) ot.addEventListener('change', () => { imp.one = { uid: ot.value, pid: '' }; renderImport(); });
+    if (op) op.addEventListener('change', () => { imp.one.pid = op.value; renderImport(); });
+    const back = $('#imp-back');
+    if (back) back.addEventListener('click', () => { imp.step = 'pick'; renderImport(); });
+    const go = $('#imp-go');
+    if (go) go.addEventListener('click', async () => {
+      if (imp.busy || !imp.plan || !imp.plan.places) return;
+      imp.busy = true;
+      go.disabled = true; go.innerHTML = '<span class="spin" aria-hidden="true"></span>Adding…';
+      const items = [...imp.plan.students.values()].map((s) => ({ first: s.first, last: s.last, parents: [...s.parents], places: s.places }));
+      imp.result = await applyPlacements(items);
+      imp.busy = false;
+      imp.step = 'done';
+      renderImport();
+      schoolChanged();
+    });
+    const sk = $('#imp-skipped');
+    if (sk) sk.addEventListener('click', () => {
+      const { header } = importRows();
+      const rows = [[...header, 'Why it was skipped'], ...imp.plan.skipped.map((s) => [...header.map((_, i) => s.r[i] || ''), s.why])];
+      saveFile(`skipped-rows-${todayStr()}.csv`, toCsv(rows));
+    });
+  }
+
+  /* ----- Actions ----- */
+  function schoolAct(act, el) {
+    const d = el.dataset;
+    switch (act) {
+      case 'sc-tab': ui.scTab = d.v; ui.scAll = false; scheduleRender(); break;
+      case 'sc-teacher': openSchoolTeacher(d.id); break;
+      case 'sc-student': openSchoolStudent(d.key); break;
+      case 'sc-all': ui.scAll = true; scheduleRender(); break;
+      case 'sc-csv': exportSchoolCsv(); break;
+      case 'sc-invite': openInvite(); break;
+      case 'sc-member': openMember(d.id); break;
+      case 'sc-uninvite':
+        cancelInvite(d.email).then(() => { toast({ kind: 'info', text: 'Invite canceled', sub: d.email }); schoolChanged(); })
+          .catch((e) => toast({ kind: 'warn', text: 'Couldn’t cancel the invite', sub: schoolErrText(e, 'that change') }));
+        break;
+      case 'sc-add': openSchoolAdd(d.uid, d.pid); break;
+      case 'sc-import': openImport(); break;
+      case 'sc-unplace': unplace(d.uid, d.sid, d.pid, d.key); break;
+      case 'sc-panel': openSchoolPanel(); break;
+      case 'sc-create': openSchoolCreate(); break;
+      case 'sc-rename': openRename(); break;
+      case 'sc-join':
+        if (School.state === 'member' && School.owner === meUid()) { toast({ kind: 'warn', text: `You run ${School.name}`, sub: 'Email us to hand it to someone else before joining another school.' }); break; }
+        el.disabled = true;
+        {
+          const inv = School.invite || {};
+          pendingSchoolLink = isStaffRole(inv.role);
+          joinSchool().then(() => {
+            closeModal();
+            toast({ kind: 'ok', text: `You joined ${inv.school || 'your school'}`, sub: inv.role === 'teacher' ? 'The school office can now see your classes.' : 'Opening the School office…' });
+            schoolChanged();
+          })
+            .catch((e) => { pendingSchoolLink = false; el.disabled = false; toast({ kind: 'warn', text: 'Couldn’t join', sub: schoolErrText(e, 'joining the school') }); });
+        }
+        break;
+      case 'sc-decline':
+        declineInvite().then(() => { toast({ kind: 'info', text: 'Invite declined' }); schoolChanged(); })
+          .catch((e) => toast({ kind: 'warn', text: 'Couldn’t decline', sub: schoolErrText(e, 'that change') }));
+        break;
+      case 'sc-leave':
+        confirmBox({
+          title: `Leave ${School.name}?`, body: `${School.name}’s admins and registrars won’t see your classes anymore. Your classes and students, including any the school office added, stay in your account.`,
+          okLabel: 'Leave school', danger: true,
+          onOk: () => leaveSchool().then(() => toast({ kind: 'info', text: `You left ${School.name}` })).catch((e) => toast({ kind: 'warn', text: 'Couldn’t leave', sub: schoolErrText(e, 'leaving the school') }))
+        });
+        break;
+      case 'sc-verify-send':
+        sendVerifyEmail().then(() => { toast({ kind: 'ok', text: 'Confirmation email sent', sub: School.me.email }); schoolChanged(); if (ui.scInviteOpen) openInvite(); })
+          .catch((e) => toast({ kind: 'warn', text: 'Couldn’t send the email', sub: authMessage(e) }));
+        break;
+      case 'sc-verify-check':
+        recheckVerified().then((ok) => {
+          if (!ok) { toast({ kind: 'info', text: 'Not confirmed yet', sub: 'Open the link in the email from TapRoll, then try again.' }); return; }
+          toast({ kind: 'ok', text: 'Email confirmed' });
+          checkInvite();
+          if (ui.scInviteOpen) openInvite();
+        }).catch((e) => toast({ kind: 'warn', text: 'Couldn’t check', sub: authMessage(e) }));
+        break;
+      default: break;
+    }
+  }
+
+  /* ============================== Example school ==============================
+     The example classroom is one teacher at a made-up Harbor View High. Five more made-up teachers share its bell
+     schedule, and their classes are filled from the example classroom's students, so each student has several
+     classes. Their check-ins follow the clock, so the School office fills in during the day like a real one. */
+  const DEMO_SCHOOL_KEY = 'taproll.data.demo.school';
+  const DEMO_TEACHERS = [
+    { uid: 'demo-alvarez', name: 'Ms. Alvarez', email: 'alvarez@harborview.example', room: '102', courses: ['English 10', 'English 10', 'AP Literature', null, 'English 10', 'Creative Writing'] },
+    { uid: 'demo-okafor', name: 'Mr. Okafor', email: 'okafor@harborview.example', room: '210', courses: ['Algebra 2', 'Geometry', 'Algebra 2', 'Precalculus', null, 'Geometry'] },
+    { uid: 'demo-chen', name: 'Ms. Chen', email: 'chen@harborview.example', room: '120', courses: ['World History', null, 'US History', 'World History', 'US History', 'Government'] },
+    { uid: 'demo-brooks', name: 'Coach Brooks', email: 'brooks@harborview.example', room: 'Gym', courses: ['PE', 'PE', 'Health', 'PE', 'PE', null] },
+    { uid: 'demo-patel', name: 'Mr. Patel', email: 'patel@harborview.example', room: '220', courses: [null, 'Chemistry', 'Physics', 'Chemistry', 'Physics', 'Chemistry'] }
+  ];
+  function demoHash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }
+  function schoolStartDemo(fresh) {
+    schoolStop();
+    School.kind = 'demo';
+    School.me = { uid: 'demo', email: 'you@harborview.example', name: 'Example classroom', verified: true, provider: 'demo' };
+    School.sid = 'demo-school'; School.owner = 'demo'; School.role = 'admin'; School.state = 'member'; School.watching = true;
+    School.name = S.settings.school || 'Harbor View High';
+    let saved = null;
+    if (!fresh) { try { saved = JSON.parse(localStorage.getItem(DEMO_SCHOOL_KEY) || 'null'); } catch (e) { saved = null; } }
+    if (saved && isObj(saved) && saved.date === todayStr() && saved.base === S.settings.sampleDate && isObj(saved.t) && isObj(saved.members)) {
+      School.members = saved.members; School.invites = isObj(saved.invites) ? saved.invites : {};
+      for (const [uid, t] of Object.entries(saved.t)) {
+        School.t[uid] = { uid, profile: { teacher: (saved.members[uid] || {}).name || '' }, ws: 'demo', periods: cleanMap(t.periods, normPeriod), students: cleanMap(t.students, normStudent), day: {}, status: 'ready' };
+      }
+    } else buildDemoSchool();
+    demoRefreshDays();
+    saveDemoSchool();
+  }
+  function buildDemoSchool() {
+    const bell = (window.TapRollDemo && window.TapRollDemo.periods) || [];
+    const mine = Object.values(S.students);
+    const mineAt = new Map();   // period number -> ids of the example classroom's students in it
+    for (const st of mine) for (const pid of st.periods) { const p = S.periods[pid]; if (p) mineAt.set(p.num, [...(mineAt.get(p.num) || []), st.id]); }
+    const at = Date.now();
+    School.members = { demo: { role: 'admin', name: 'Example classroom', email: 'you@harborview.example', at } };
+    School.members['demo-reyes'] = { role: 'registrar', name: 'Daniel Reyes', email: 'registrar@harborview.example', at };
+    School.invites = { 'new.teacher@harborview.example': { email: 'new.teacher@harborview.example', role: 'teacher', byName: 'Daniel Reyes', byEmail: 'registrar@harborview.example', at: at - 86400000 } };
+    const entries = new Map();   // teacher uid -> Map(student id in the example classroom -> entry)
+    const seats = {};
+    for (const T of DEMO_TEACHERS) {
+      School.members[T.uid] = { role: 'teacher', name: T.name, email: T.email, at };
+      const t = { uid: T.uid, profile: { teacher: T.name }, ws: 'demo', periods: {}, students: {}, day: {}, status: 'ready' };
+      T.courses.forEach((course, i) => {
+        const b = bell[i];
+        if (!course || !b) return;
+        const id = `p${b.num}${T.uid.slice(5, 9)}`;
+        t.periods[id] = normPeriod({ id, num: b.num, course, room: T.room, start: b.start, end: b.end });
+        (seats[b.num] = seats[b.num] || []).push({ t, pid: id });
+      });
+      School.t[T.uid] = t;
+      entries.set(T.uid, new Map());
+    }
+    // Each period, students who aren't in the example classroom then are spread across the other teachers' classes.
+    for (const [num, list] of Object.entries(seats)) {
+      const busy = new Set(mineAt.get(Number(num)) || []);
+      const free = mine.filter((st) => !busy.has(st.id)).sort((a, b) => demoHash(a.id + num) - demoHash(b.id + num));
+      const per = Math.min(28, Math.ceil(free.length / list.length));
+      list.forEach(({ t, pid }, k) => {
+        for (const st of free.slice(k * per, (k + 1) * per)) {
+          const map = entries.get(t.uid);
+          let e = map.get(st.id);
+          if (!e) {
+            const linked = !!st.token && demoHash(st.id + t.uid) < 0.85;
+            e = normStudent({ id: 's' + st.id.slice(1, 6) + t.uid.slice(5, 9), first: st.first, last: st.last, periods: [], token: linked ? st.token : null, uids: [], tagAt: linked ? st.tagAt : null, parents: st.parents });
+            e.sk = st.token || `k${st.id.slice(1)}`.slice(0, 12);
+            map.set(st.id, e);
+          }
+          e.periods.push(pid);
+        }
+      });
+    }
+    for (const [uid, map] of entries) for (const e of map.values()) School.t[uid].students[e.id] = e;
+  }
+  // Check-ins follow the clock: each student's arrival time is fixed for the day, so they appear as time passes.
+  function demoRefreshDays() {
+    if (School.kind !== 'demo') return;
+    const date = todayStr();
+    const base = parseDate(date).getTime();
+    const now = Date.now();
+    const absentMine = new Set();
+    for (const per of Object.values(S.days[date] || {})) for (const [sid, mk] of Object.entries(per)) if (mk.s === 'A' || mk.s === 'E') { const st = S.students[sid]; if (st) absentMine.add(nameKey(st.first, st.last)); }
+    for (const t of Object.values(School.t)) {
+      const day = {};
+      for (const p of Object.values(t.periods)) {
+        const s = base + toMin(p.start) * 60000, e = base + toMin(p.end) * 60000;
+        if (now < s - passOf(p) * 60000) continue;
+        const marks = {};
+        for (const st of Object.values(t.students)) {
+          if (!st.periods.includes(p.id)) continue;
+          const r = demoHash(`${st.sk || st.id}|${date}`), r2 = demoHash(`${st.id}|${p.id}|${date}`);
+          const out = absentMine.has(nameKey(st.first, st.last)) || r < 0.03;
+          if (out) { if (now >= s + 10 * 60000) marks[st.id] = { s: r < 0.008 ? 'E' : 'A', t: s + 10 * 60000, m: 'manual' }; continue; }
+          const late = r2 < 0.06;
+          const arrive = late ? s + (6 + Math.floor(r2 * 180)) * 60000 : s - 240000 + Math.floor(r2 * 420000);
+          if (arrive > now) { if (now >= e) marks[st.id] = { s: 'A', t: s + 10 * 60000, m: 'manual' }; continue; }
+          marks[st.id] = { s: arrive > s + graceOf(p) * 60000 ? 'T' : 'P', t: arrive, m: st.token ? 'nfc' : 'manual' };
+        }
+        if (Object.keys(marks).length) day[p.id] = marks;
+      }
+      t.day = day;
+    }
+  }
+  function saveDemoSchool() {
+    if (School.kind !== 'demo') return;
+    const t = {};
+    for (const [uid, d] of Object.entries(School.t)) t[uid] = { periods: d.periods, students: d.students };
+    try { localStorage.setItem(DEMO_SCHOOL_KEY, JSON.stringify({ date: todayStr(), base: S.settings.sampleDate, members: School.members, invites: School.invites, t })); } catch (e) { /* storage full or blocked */ }
   }
 
   /* ============================== Accounts ==============================
@@ -3550,9 +5519,14 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     NFC.stopScan(true);
     if (ui.kiosk) { ui.kiosk = false; renderKiosk(); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { /* optional */ } }
     closeModal();
+    // Messages about the last account's work shouldn't linger for whoever signs in next.
+    const host = $('#toasts');
+    if (host) host.innerHTML = '';
+    schoolStop();
     Store.close();
     Session.kind = null;
     Session.user = null;
+    Session.office = false;
     ui.ready = false; ui.readOnly = false; ui.syncError = null; ui.scanning = false;
     releaseWakeLock();
   }
@@ -3586,6 +5560,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const provider = ((user.providerData || [])[0] || {}).providerId || 'password';
     Session.kind = 'cloud';
     Session.user = { id: user.uid, name: user.displayName || pending.name || '', email: user.email || '', provider };
+    // Signed up as a school admin or registrar: offer to set up the school (or join it) once the app opens.
+    Session.office = !!pending.office;
+    schoolStartCloud(user);
     Store.openFirestore(Cloud.fs, user.uid);
     // First sign-in: create the teacher's profile document.
     Store.onNewProfile = () => {
@@ -3618,11 +5595,13 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     Store.openLocal(DEMO_KEY, () => makeDemoState());
     // Example data is built around today's bell schedule, so refresh it on a new day.
     if (S.settings.sampleDate !== todayStr()) { S = makeDemoState(); Store.saveLocalSoon(); }
+    schoolStartDemo();
     enterApp();
   }
   function resetDemoData(seed) {
     S = makeDemoState(seed);
     Store.saveLocalSoon();
+    schoolStartDemo(true);
     resetView();
     pickInitialView();
     dataChanged();
@@ -3640,6 +5619,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const kind = Session.kind;
     if (kind === 'demo') { leaveDemo('signin'); return; }
     if (Session.user && Session.user.email) authUI.email = Session.user.email;
+    authUI.role = 'teacher';
     endSession();
     if (kind === 'device') Device.signOut();
     showAuth('signin');
@@ -3662,7 +5642,19 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   }
 
   /* ============================== Sign-in screen ============================== */
-  const authUI = { view: 'signin', email: '', name: '', school: '', busy: false };
+  // role: who's signing up, 'teacher' or 'office' (a school admin or registrar). Only asked with cloud sign-in.
+  const authUI = { view: 'signin', email: '', name: '', school: '', busy: false, role: 'teacher' };
+  function setAuthRole(v) {
+    authUI.role = v === 'office' ? 'office' : 'teacher';
+    document.querySelectorAll('[data-act="au-role"]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === authUI.role)));
+    const note = $('#au-role-note');
+    if (note) note.textContent = roleNote();
+    const lab = $('#au-school-label');
+    if (lab) lab.innerHTML = authUI.role === 'office' ? 'School' : 'School <em>optional</em>';
+  }
+  const roleNote = () => (authUI.role === 'office'
+    ? 'Next, you’ll set up your school or join the one that invited you. Then you’ll see every class live.'
+    : 'You’ll set up your periods and rosters. If your school uses TapRoll, you can join it later.');
 
   function showAuth(view) {
     ui.screen = 'auth';
@@ -3760,6 +5752,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function authNotices() {
     let out = '';
     if (pendingTag) out += `<div class="af-note">${ic('nfc')}<span>A student’s tag was tapped. Sign in to check them in.</span></div>`;
+    else if (pendingSchoolLink) out += `<div class="af-note">${ic('school')}<span>Joining your school? Sign in, or create an account, with the email address your school invited.</span></div>`;
     if (Cloud.cfg && Cloud.state === 'error') out += `<div class="af-note warn">${ic('alert')}<span>Couldn’t connect to sign-in. Check your internet connection, then reload.</span><button type="button" class="linkbtn" data-act="reload">Reload</button></div>`;
     if (!Cloud.cfg && !Store.localWorks()) out += `<div class="af-note warn">${ic('alert')}<span>This browser is blocking storage, so accounts won’t be saved after you close this page.</span></div>`;
     return out;
@@ -3783,14 +5776,20 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + pwField('Password', 'current-password', `<button type="button" class="linkbtn" data-act="auth-view" data-v="reset">Forgot password?</button>`)
       + `<button type="submit" class="btn primary block" id="au-submit">Sign in</button>`
       + googleBlock()
-      + `<p class="af-switch">New to TapRoll? <button type="button" class="linkbtn" data-act="auth-view" data-v="signup">Create an account</button></p></form>`;
+      + `<p class="af-switch">New to TapRoll? <button type="button" class="linkbtn" data-act="auth-view" data-v="signup">Create an account</button></p>`
+      + (Cloud.cfg ? `<p class="af-office">${ic('school')}<span>School admins and registrars sign in here too.</span></p>` : '')
+      + `</form>`;
   }
   function signUpForm() {
     return `<form class="auth-form" data-form="signup" novalidate>`
       + `<div class="af-head"><h1>Create your account</h1><p>Set up TapRoll for your classes. It takes a minute.</p></div>`
       + authNotices() + errBox
+      + (Cloud.cfg ? `<div class="field au-role"><span id="au-role-label">I’m signing up as</span><div class="seg block" role="radiogroup" aria-labelledby="au-role-label">`
+        + `<button type="button" role="radio" aria-checked="${authUI.role !== 'office'}" data-act="au-role" data-v="teacher">A teacher</button>`
+        + `<button type="button" role="radio" aria-checked="${authUI.role === 'office'}" data-act="au-role" data-v="office">School admin or registrar</button></div>`
+        + `<small id="au-role-note">${esc(roleNote())}</small></div>` : '')
       + `<div class="grid2"><label class="field"><span>Your name</span><input id="au-name" name="name" autocomplete="name" maxlength="60" placeholder="Ms. Rivera" value="${esc(authUI.name)}" required></label>`
-      + `<label class="field"><span>School <em>optional</em></span><input id="au-school" name="school" autocomplete="organization" maxlength="60" value="${esc(authUI.school)}"></label></div>`
+      + `<label class="field"><span id="au-school-label">${authUI.role === 'office' && Cloud.cfg ? 'School' : 'School <em>optional</em>'}</span><input id="au-school" name="school" autocomplete="organization" maxlength="60" value="${esc(authUI.school)}"></label></div>`
       + emailField()
       + pwField('Password', 'new-password', '<small class="hint">At least 8 characters</small>')
       + `<button type="submit" class="btn primary block" id="au-submit">Create account</button>`
@@ -3934,7 +5933,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     try {
       if (Cloud.cfg) {
         requireCloud();
-        Cloud.pendingProfile = { name, school };
+        Cloud.pendingProfile = { name, school, office: authUI.role === 'office' };
         const cred = await Cloud.auth.createUserWithEmailAndPassword(email, pw);
         try { await cred.user.updateProfile({ displayName: name }); } catch (e) { /* the profile document holds the name too */ }
       } else {
@@ -3948,8 +5947,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       return;
     }
     setAuthBusy(false);
-    authUI.name = ''; authUI.school = '';
-    toast({ kind: 'ok', text: `Welcome, ${firstName(name)}`, sub: 'Add your first period to get started.' });
+    const office = authUI.role === 'office' && !!Cloud.cfg;
+    authUI.name = ''; authUI.school = ''; authUI.role = 'teacher';
+    toast({ kind: 'ok', text: `Welcome, ${firstName(name)}`, sub: office ? 'Next, set up your school or join the one that invited you.' : 'Add your first period to get started.' });
   }
   async function submitReset(form) {
     const email = form.elements.email.value.trim();
@@ -3974,8 +5974,11 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       provider.setCustomParameters({ prompt: 'select_account' });
     } catch (err) { showAuthError(authMessage(err)); return; }
     setAuthBusy(true, 'google', 'Waiting for Google…');
+    captureAuthFields();
+    if (authUI.view === 'signup') Cloud.pendingProfile = { school: String(authUI.school || '').trim(), office: !!Cloud.cfg && authUI.role === 'office' };
     // Called straight from the click, so browsers allow the Google window to open.
-    Cloud.auth.signInWithPopup(provider).then(() => setAuthBusy(false)).catch((err) => {
+    Cloud.auth.signInWithPopup(provider).then(() => { setAuthBusy(false); authUI.role = 'teacher'; }).catch((err) => {
+      Cloud.pendingProfile = null;
       setAuthBusy(false);
       const code = String((err && err.code) || '');
       if (/popup-closed-by-user|cancelled-popup-request|user-cancelled/.test(code)) return;
@@ -4128,9 +6131,85 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const FIRESTORE_RULES = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each teacher can read and write only their own classes.
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function verified() { return request.auth.token.email_verified == true; }
+    function isMember(sid) {
+      return signedIn() && exists(/databases/$(database)/documents/schools/$(sid)/members/$(request.auth.uid));
+    }
+    function myRole(sid) {
+      return get(/databases/$(database)/documents/schools/$(sid)/members/$(request.auth.uid)).data.role;
+    }
+    function isStaff(sid) { return isMember(sid) && myRole(sid) in ['admin', 'registrar']; }
+    function isAdmin(sid) { return isMember(sid) && myRole(sid) == 'admin'; }
+    function ownerOf(sid) { return get(/databases/$(database)/documents/schools/$(sid)).data.owner; }
+    // A school's admins and registrars can see a teacher's classes while the
+    // teacher is a member of that school and has joined it (schoolId).
+    function staffOver(uid) {
+      let sid = get(/databases/$(database)/documents/teachers/$(uid)).data.get('schoolId', '');
+      return sid != '' && isStaff(sid)
+        && exists(/databases/$(database)/documents/schools/$(sid)/members/$(uid));
+    }
+    function invitedTo(sid, role) {
+      let inv = get(/databases/$(database)/documents/invites/$(myEmail()));
+      return inv.data.sid == sid && inv.data.role == role;
+    }
+    // Only people with a confirmed email can invite, so invites show who really sent them.
+    // Registrars invite teachers. Admins invite anyone.
+    function canInvite(sid, d) {
+      return signedIn() && verified() && d.byEmail == myEmail()
+        && d.role in ['teacher', 'registrar', 'admin']
+        && ((d.role == 'teacher' && isStaff(sid)) || isAdmin(sid));
+    }
+    function validName(d) { return d.name is string && d.name.size() > 0 && d.name.size() <= 80; }
+
+    // Each teacher reads and writes their own classes. Their school's admins and
+    // registrars can read them, and can put students in class rosters.
     match /teachers/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if signedIn() && me() == uid;
+      allow read: if signedIn() && staffOver(uid);
+    }
+    match /teachers/{uid}/ws/{ws}/meta/roster {
+      allow create, update: if signedIn() && staffOver(uid);
+    }
+
+    // Whoever sets up a school owns it and is its first admin.
+    match /schools/{sid} {
+      allow read: if isMember(sid);
+      allow create: if signedIn() && request.resource.data.owner == me() && validName(request.resource.data);
+      allow update: if isAdmin(sid) && request.resource.data.owner == resource.data.owner && validName(request.resource.data);
+    }
+    match /schools/{sid}/members/{uid} {
+      allow read: if isMember(sid) || (signedIn() && uid == me());
+      // Joining: the owner adds themselves as admin, and everyone else accepts an
+      // invite sent to their confirmed email, with the role it names.
+      allow create: if signedIn() && uid == me() && request.resource.data.email == myEmail() && (
+        (request.resource.data.role == 'admin'
+          && getAfter(/databases/$(database)/documents/schools/$(sid)).data.owner == me())
+        || (verified() && invitedTo(sid, request.resource.data.role)));
+      // Admins change roles. Members can update their own name.
+      allow update: if (isAdmin(sid) && uid != ownerOf(sid)
+          && request.resource.data.role in ['teacher', 'registrar', 'admin'])
+        || (signedIn() && uid == me()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+      // Anyone but the owner can leave. Admins remove anyone else; registrars remove teachers.
+      allow delete: if signedIn() && uid != ownerOf(sid)
+        && (uid == me() || isAdmin(sid) || (isStaff(sid) && resource.data.role == 'teacher'));
+    }
+
+    // Invites: one pending invite per email address. The school keeps its own list.
+    match /invites/{email} {
+      allow get: if signedIn() && ((verified() && myEmail() == email) || isStaff(resource.data.sid));
+      allow create: if canInvite(request.resource.data.sid, request.resource.data);
+      allow update: if signedIn() && isStaff(resource.data.sid)
+        && canInvite(request.resource.data.sid, request.resource.data);
+      allow delete: if signedIn() && ((verified() && myEmail() == email) || isStaff(resource.data.sid));
+    }
+    match /schools/{sid}/invites/{email} {
+      allow read: if isStaff(sid);
+      allow create, update: if canInvite(sid, request.resource.data);
+      allow delete: if isStaff(sid) || (signedIn() && verified() && myEmail() == email);
     }
   }
 }`;
@@ -4155,7 +6234,7 @@ service cloud.firestore {
       + setupStep('Turn on sign-in', 'Open <b>Authentication</b>, click <b>Get started</b>, then enable <b>Email/Password</b> and <b>Google</b>.')
       + setupStep('Allow your site', `In Authentication, open <b>Settings › Authorized domains</b> and add <code>${esc(host)}</code>.`)
       + setupStep('Create the database', 'Open <b>Firestore Database</b>, click <b>Create database</b>, keep the defaults, and start in <b>production mode</b>.')
-      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher can then read and write only their own classes.${codeBlock('rules-code', FIRESTORE_RULES)}`)
+      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before schools existed, paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
       + setupStep('Fill in config.js', 'Copy the <code>const firebaseConfig = { … };</code> block from step 2 and paste it into <code>config.js</code> in place of everything there. Upload <code>config.js</code> to the same folder as <code>app.html</code>. You can find the block again later under <b>Project settings › General › Your apps</b>.')
       + setupStep('Reload TapRoll', 'GitHub can take a few minutes to update. Then the sign-in page shows <b>Continue with Google</b>, and classes sync across devices.')
       + `</ol><p class="m-text small">Accounts made on a device before the switch stay on that device. To move classes over, download a backup in Settings, sign in with your new account, and restore it.</p></div>`,
