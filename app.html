@@ -1090,6 +1090,32 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   .sc-roll li { grid-template-columns: minmax(0, 1fr) auto 56px; }
 }
 
+/* Late passes */
+.lp-note { margin: 0; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: var(--r); background: var(--e-soft); color: var(--ink-2); font-size: 13px; }
+.lp-note .ic { width: 16px; height: 16px; color: var(--e); margin-top: 1px; }
+.lp-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.lp-tools .m-text { flex: 1 1 220px; }
+.lp-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 6px; max-height: 46vh; overflow: auto; }
+.lp-list .check { width: 100%; border-radius: var(--r-sm); justify-content: flex-start; }
+.lp-list .check small { margin-left: auto; font-weight: 500; color: var(--muted); font-size: 12px; }
+
+/* Automatic parent emails */
+.am-note { background: var(--accent-soft); }
+.am-note .ic { color: var(--accent); }
+.sent.later { color: var(--muted); font-weight: 500; }
+.sent.later .ic { color: var(--muted); }
+.mg-vars { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.mg-vars .pill { margin: 0 4px; vertical-align: 1px; }
+.sc-idline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.sc-idline code { user-select: all; }
+#mail-sec .opstatus { margin: 0; }
+#mail-sec .opstatus .op-body p { margin: 0; }
+code.nw { white-space: nowrap; }
+.sent.failed { color: var(--a); }
+.sent.failed .ic { color: var(--a); }
+.warn-line { display: flex; align-items: flex-start; gap: 6px; }
+.warn-line .ic { width: 15px; height: 15px; color: var(--t); flex: none; margin-top: 2px; }
+
 </style>
 <script>window.__taprollCfg={loaded:false,missing:false,error:null};window.addEventListener('error',function(e){if(e&&/config\.js/.test(e.filename||''))window.__taprollCfg.error=String(e.message||'error').replace(/^Uncaught\s+/,'');});</script>
 <script src="config.js" onload="window.__taprollCfg.loaded=true" onerror="window.__taprollCfg.missing=true"></script>
@@ -1275,6 +1301,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   'use strict';
   const BUILD_TARGET = 'site';
   const APP_URL = 'https://taprolleducation.com/app.html';
+  const WORKER_URL = 'https://taprolleducation.com/taproll-mail-worker.js';
+  const SUPPORT_EMAIL = 'support@taprolleducation.com';
   /* ============================== Utilities ============================== */
   const $ = (s, el = document) => el.querySelector(s);
   const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -1377,8 +1405,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const EXCUSES = ['Held by another teacher', 'Office pass', 'Late bus', 'Other'];
   const markLabel = (mk) => (mk.xt ? 'Excused tardy' : STATUS[mk.s]);
 
-  /* Parent emails. TapRoll never sends email itself: it opens a draft, addressed and written, in the teacher's own
-     email (their email app, Gmail or Outlook on the web), and the teacher reviews it and sends it. */
+  /* Parent emails. A teacher can open a draft, addressed and written, in their own email (their email app, Gmail or
+     Outlook on the web), review it and send it. Where the site's owner runs the automatic sender (see Automatic
+     parent emails), TapRoll also emails parents itself a few minutes after class ends. */
   const EMAIL_RE = /^[^\s@,;<>()"']+@[^\s@,;<>()"']+\.[^\s@,;<>()"'.]{2,}$/;
   // Up to 3 addresses, separated by commas, semicolons or spaces. Returns { ok, bad }.
   function parseEmails(text) {
@@ -1444,7 +1473,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     return h * 60 + m;
   }
 
-  const emptyState = (settings) => ({ settings: { ...DEFAULT_SETTINGS, ...(settings || {}) }, periods: {}, students: {}, days: {} });
+  // passes: late passes by date ({ <date>: { <passId>: pass } }), see Late passes.
+  const emptyState = (settings) => ({ settings: { ...DEFAULT_SETTINGS, ...(settings || {}) }, periods: {}, students: {}, days: {}, passes: {} });
   let S = emptyState();
   const ui = {
     screen: 'boot', ready: false, view: 'overview', periodId: null, date: todayStr(),
@@ -1474,7 +1504,11 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const out = { s: mk.s, t: Number(mk.t) || 0, m: String(mk.m || 'manual') };
     if (mk.xt && mk.s === 'P') { out.xt = 1; if (mk.why) out.why = String(mk.why).slice(0, 90); }
     // n: when a parent email was opened for this absence or tardy
-    if (Number(mk.n) && (mk.s === 'A' || mk.s === 'T')) out.n = Number(mk.n);
+    if (Number(mk.n) && (mk.s === 'A' || mk.s === 'T')) { out.n = Number(mk.n); if (mk.na) out.na = 1; }
+    // nf: TapRoll couldn't email the parent automatically (the address was refused), so the teacher can send it
+    else if (mk.nf && (mk.s === 'A' || mk.s === 'T')) out.nf = 1;
+    // px: the late pass that excused this tardy (kept after "Mark tardy again", so it isn't applied twice)
+    if (typeof mk.px === 'string' && mk.px && (mk.s === 'P' || mk.s === 'T')) out.px = mk.px.slice(0, 24);
     return out;
   }
   function normStudent(s) {
@@ -1513,13 +1547,21 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       settings: { ...DEFAULT_SETTINGS, ...(isObj(raw.settings) ? raw.settings : {}) },
       periods: cleanMap(raw.periods, normPeriod),
       students: cleanMap(raw.students, normStudent),
-      days: {}
+      days: {},
+      passes: {}
     };
     if (isObj(raw.days)) {
       for (const [date, per] of Object.entries(raw.days)) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
         const d = cleanDay(per);
         if (Object.keys(d).length) st.days[date] = d;
+      }
+    }
+    if (isObj(raw.passes)) {
+      for (const [date, map] of Object.entries(raw.passes)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+        const ps = cleanPasses(map);
+        if (Object.keys(ps).length) st.passes[date] = ps;
       }
     }
     return st;
@@ -1624,6 +1666,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       this.loaded.settings = true;
       if (this.ws === null || (S.settings.ws || '') !== this.ws) this.switchWs(S.settings.ws || '');
       if (!snap.exists && !this.profileWritten && this.onNewProfile) { this.profileWritten = true; this.onNewProfile(); }
+      if (snap.exists) syncMailTz();
       schoolSync();
       dataChanged();
     },
@@ -1632,7 +1675,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       this.wsUnsubs.forEach((u) => { try { u(); } catch (e) { /* already closed */ } });
       this.wsUnsubs = [];
       this.ws = ws;
-      S.periods = {}; S.students = {}; S.days = {};
+      S.periods = {}; S.students = {}; S.days = {}; S.passes = {};
       const ready = !ws || !!fresh;
       this.loaded.periods = this.loaded.roster = this.loaded.days = ready;
       if (!ws || this.mode !== 'fs') return;
@@ -1652,9 +1695,12 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         if (this.ws !== ws) return;
         for (const ch of qs.docChanges()) {
           const id = ch.doc.id;
-          if (ch.type === 'removed') { delete S.days[id]; continue; }
-          const day = cleanDay((ch.doc.data() || {}).periods);
+          if (ch.type === 'removed') { delete S.days[id]; delete S.passes[id]; continue; }
+          const data = ch.doc.data() || {};
+          const day = cleanDay(data.periods);
           if (Object.keys(day).length) S.days[id] = day; else delete S.days[id];
+          const ps = cleanPasses(data.passes);
+          if (Object.keys(ps).length) S.passes[id] = ps; else delete S.passes[id];
         }
         this.loaded.days = true; dataChanged();
       }, onErr));
@@ -1697,10 +1743,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   // In Firestore, data lives under a workspace id. Make one before the first write.
   function ensureWs() {
     if (Store.mode !== 'fs' || Store.ws) return;
-    const keep = { periods: S.periods, students: S.students, days: S.days };
+    const keep = { periods: S.periods, students: S.students, days: S.days, passes: S.passes };
     const ws = 'ws-' + rid(6);
     Store.switchWs(ws, true);
-    S.periods = keep.periods; S.students = keep.students; S.days = keep.days;
+    S.periods = keep.periods; S.students = keep.students; S.days = keep.days; S.passes = keep.passes;
     setSettings({ ws });
   }
   function setSettings(patch) {
@@ -1745,7 +1791,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       const mk = mark ? normMark(mark) : null;
       if (mk) per[sid] = mk; else delete per[sid];
       // Firestore merges into the stored mark field by field, so clear the excuse fields explicitly.
-      patch[sid] = mk ? { xt: null, why: null, n: null, ...mk } : null;
+      patch[sid] = mk ? { xt: null, why: null, n: null, na: null, nf: null, px: null, ...mk } : null;
     }
     if (!Object.keys(per).length) delete day[pid];
     if (!Object.keys(day).length) delete S.days[date];
@@ -2116,12 +2162,15 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       return;
     }
     if (!editable()) { report({ kind: 'warn', text: 'View only', sub: 'Your access to this portal doesn’t allow check-ins.' }); return; }
-    const s = tapStatus(p);
+    let s = tapStatus(p);
     const t = Date.now();
-    setMark(target.date, p.id, st.id, { s, t, m: scan.source });
+    // Kept late by their last teacher: the tardy is excused right away.
+    const pass = s === 'T' ? passFor(st, p, target.date) : null;
+    if (pass) s = 'P';
+    setMark(target.date, p.id, st.id, pass ? { s, t, m: scan.source, xt: 1, why: passWhy(pass), px: pass.id } : { s, t, m: scan.source });
     const ev = {
       kind: s === 'T' ? 'tardy' : 'present', text: fullName(st),
-      sub: `${STATUS[s]} · ${periodLabel(p)} · ${fmtClock(t)}`, pid: p.id, sid: st.id,
+      sub: `${pass ? `Excused tardy (${passWhy(pass)})` : STATUS[s]} · ${periodLabel(p)} · ${fmtClock(t)}`, pid: p.id, sid: st.id,
       actions: [{ key: 'undo', label: 'Undo', run: () => { setMark(target.date, p.id, st.id, prev); scheduleRender(); } }]
     };
     // A late student often has a reason (another teacher kept them), so offer to excuse it right away.
@@ -2260,6 +2309,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       pickInitialView();
       maybeOpenOffice();
       setTimeout(() => {
+        applyPasses();
         if (pendingTag) processPendingHash();
         else if (Session.office && School.state === 'none' && !modal.open) { Session.office = false; openOfficeStart(); }
         else if (pendingSchoolLink) applySchoolLink();
@@ -2561,7 +2611,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + `<input class="input" id="roster-search" type="search" placeholder="Search ${roster.length} students" value="${esc(ui.search)}" autocomplete="off"></label>`
       + `<div class="chips">${filters.map(([v, l, n]) => `<button class="chip" data-act="filter" data-v="${v}" aria-pressed="${ui.filter === v}">${l} <b>${n}</b></button>`).join('')}</div>`
       + `${editable() ? `<div class="rtools-actions">${c.A + c.T ? `<button class="btn sm" data-act="email-parents">${ic('mail')} Email parents${pendingEmails(p, date) ? ` <b class="cnt">${pendingEmails(p, date)}</b>` : ''}</button>` : ''}`
-        + `<button class="btn sm" data-act="mark-rest" ${c.U ? '' : 'disabled'}>Mark ${c.U} not-yet absent</button><button class="btn sm primary" data-act="add-students">${ic('plus')} Add students</button></div>` : ''}</div>`;
+        + `${isToday && phaseOf(p) !== 'later' && roster.length ? `<button class="btn sm" data-act="late-pass">${ic('clock')} Kept class late</button>` : ''}`
+        + `<button class="btn sm" data-act="mark-rest" ${c.U ? '' : 'disabled'}>Mark ${c.U} not-yet absent</button><button class="btn sm primary" data-act="add-students">${ic('plus')} Add students</button></div>` : ''}</div>`
+      + latePassNote(p, date) + autoMailNote(p, date);
     let grid;
     if (!roster.length) {
       grid = `<div class="empty"><h3>No students in ${esc(periodLabel(p))} yet</h3><p>Paste names from your class list or a spreadsheet. You can write or link each student’s NFC tag afterward.</p>`
@@ -2836,10 +2888,25 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function parentEmailBits(st, p, date, mk) {
     if (!needsEmail(mk)) return { btn: '', note: '' };
     if (!st.parents.length) return { btn: '', note: `<p class="m-text small">To email ${esc(st.first || 'their')} parent, add a parent email under Details below.</p>` };
-    return {
-      btn: emailLink(st, p, date, mk, mk.n ? 'Email parent again' : 'Email parent'),
-      note: mk.n ? `<p class="m-text small sent-line">${ic('check')}Parent email opened at ${esc(fmtClock(mk.n))}.</p>` : ''
-    };
+    if (mk.n) {
+      return {
+        btn: emailLink(st, p, date, mk, 'Email parent again'),
+        note: `<p class="m-text small sent-line">${ic('check')}${mk.na ? 'Parent emailed automatically' : 'Parent email opened'} at ${esc(fmtClock(mk.n))}.</p>`
+      };
+    }
+    if (mk.nf) {
+      return {
+        btn: emailLink(st, p, date, mk, 'Email parent'),
+        note: `<p class="m-text small warn-line">${ic('alert')}TapRoll couldn’t email ${esc(st.first ? `${st.first}’s` : 'their')} parent automatically. Check the address under Details below, then email them yourself.</p>`
+      };
+    }
+    if (autoToday(date)) {
+      return {
+        btn: emailLink(st, p, date, mk, 'Email parent now'),
+        note: `<p class="m-text small sent-line">${ic('mail')}TapRoll emails ${esc(st.first ? `${st.first}’s` : 'their')} parent automatically after class.</p>`
+      };
+    }
+    return { btn: emailLink(st, p, date, mk, 'Email parent'), note: '' };
   }
   function followSection(st, { date, p, mk }, first) {
     const when = `${periodLabel(p)}${date !== todayStr() ? `, ${fmtDateShort(date)}` : ''}`;
@@ -2874,6 +2941,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   // Absent or tardy students in a period whose parent has an email on file and hasn't been emailed yet.
   function pendingEmails(p, date) {
     const marks = marksOf(date, p.id);
+    // TapRoll sends these itself after class, except any it couldn't send.
+    if (autoToday(date)) return rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n && marks[st.id].nf).length;
     return rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n).length;
   }
   // Every absent or tardy student in the open period on the day being viewed, each with a button that opens a
@@ -2883,6 +2952,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     if (!p) return;
     const date = ui.date;
     const marks = marksOf(date, p.id);
+    const auto = autoToday(date);
     const rows = rosterOf(p.id).map((st) => ({ st, mk: marks[st.id] })).filter((r) => needsEmail(r.mk))
       .sort((a, b) => (a.mk.s === b.mk.s ? byName(a.st, b.st) : (a.mk.s === 'A' ? -1 : 1)));
     const day = date === todayStr() ? 'Today' : fmtDateShort(date);
@@ -2890,14 +2960,16 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       ? `<ul class="pm-list">${rows.map(({ st, mk }) => {
         const action = !st.parents.length
           ? `<button type="button" class="btn sm" data-act="add-parent-email" data-id="${esc(st.id)}">${ic('plus')} Add parent email</button>`
-          : (mk.n ? `<span class="sent">${ic('check')}Opened ${esc(fmtClock(mk.n))}</span>${emailLink(st, p, date, mk, 'Email again')}` : emailLink(st, p, date, mk));
+          : (mk.n ? `<span class="sent">${ic('check')}${mk.na ? 'Emailed automatically' : 'Opened'} ${esc(fmtClock(mk.n))}</span>${emailLink(st, p, date, mk, 'Email again')}`
+            : mk.nf ? `<span class="sent failed">${ic('alert')}Couldn’t send</span>${emailLink(st, p, date, mk)}`
+            : (auto ? `<span class="sent later">${ic('clock')}Sends after class</span>${emailLink(st, p, date, mk, 'Email now')}` : emailLink(st, p, date, mk)));
         return `<li class="pm-row"><span class="pill ${mk.s === 'A' ? 'a' : 't'}">${mk.s === 'A' ? 'Absent' : 'Tardy'}</span>`
           + `<span class="pm-who"><b>${esc(fullName(st))}</b><span>${st.parents.length ? esc(st.parents.join(', ')) : 'No parent email yet'}${mk.s === 'T' ? ` · in at ${esc(fmtClock(mk.t))}` : ''}</span></span>`
           + `<span class="pm-act">${action}</span></li>`;
       }).join('')}</ul>`
       : `<p class="m-text">No one in ${esc(periodLabel(p))} is absent or tardy ${day === 'Today' ? 'today' : `on ${esc(day)}`}.</p>`;
     const html = `${modalHead('Email parents', `${periodLabel(p)} · ${day}`)}<div class="m-body">`
-      + `<p class="m-text small">Each button opens an email to that student’s parent, already written. Read it over, then send it from your own account.</p>`
+      + `<p class="m-text small">${auto ? 'TapRoll emails these parents automatically a few minutes after class ends. To send one now from your own account, use its button.' : 'Each button opens an email to that student’s parent, already written. Read it over, then send it from your own account.'}</p>`
       + `<div class="field"><span>Open emails in</span>${viaSeg()}</div>${list}</div>`;
     const box = $('#modal-root .modal');
     if (refresh && ui.parentsOpen && box) { box.innerHTML = html; return; }
@@ -2908,7 +2980,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function markEmailed(sid, date, pid) {
     const mk = marksOf(date, pid)[sid];
     if (!needsEmail(mk) || !editable()) return;
-    setMark(date, pid, sid, { ...mk, n: Date.now() });
+    const { na, ...rest } = mk;   // opened by hand now, even if it was emailed automatically before
+    setMark(date, pid, sid, { ...rest, n: Date.now() });
     if (ui.openStudent === sid) refreshStudent();
     if (ui.parentsOpen) openParentEmails(true);
     scheduleRender();
@@ -2926,7 +2999,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   function unexcuseTardy(sid, date, pid) {
     const mk = marksOf(date, pid)[sid];
     if (!mk || !mk.xt || !editable()) return;
-    setMark(date, pid, sid, { s: 'T', t: mk.t, m: mk.m });
+    setMark(date, pid, sid, { s: 'T', t: mk.t, m: mk.m, px: mk.px });
     refreshStudent();
     scheduleRender();
   }
@@ -3286,6 +3359,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     return 'Saved in this browser on this device. Clearing browser data erases it, so download a backup now and then.';
   }
   function openSettings() {
+    loadMail(false, 60000);
     const auto = autoBase();
     const can = editable();
     const demo = Session.kind === 'demo';
@@ -3302,8 +3376,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       + `<p class="m-text small" id="set-err" hidden></p>`
       + `<div class="m-foot"><button type="submit" class="btn primary">Save settings</button></div></form></section>`
       + schoolSettingsSection()
-      + `<section class="dsec"><h3>Parent emails</h3><p class="m-text small">When a student is absent or tardy, TapRoll writes the email to their parent. It opens in your own email so you can check it and send it. Add parent emails in each student’s details.</p>`
-      + `<div class="field"><span>Open emails in (this device)</span>${viaSeg()}</div></section>`
+      + mailSettingsSection()
       + `<section class="dsec"><h3>Data</h3><p class="m-text small">${esc(storageText())}</p>`
       + `<div class="row"><button class="btn" data-act="export-all">${ic('download')} All attendance (CSV)</button><button class="btn" data-act="export-backup">${ic('download')} Download backup</button>`
       + `${can ? `<label class="btn" for="set-import">${ic('upload')} Restore backup</label><input type="file" id="set-import" accept="application/json,.json" hidden>` : ''}</div>`
@@ -3311,6 +3384,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         + `<button class="btn" data-act="load-demo">${ic('spark')} ${demo ? 'Reset example data' : 'Load example data'}</button>`
         + `${demo ? '' : `<button class="btn danger" data-act="start-fresh">${ic('trash')} Start fresh</button>`}</div>` : ''}`
       + `${Session.kind === 'device' ? `<p class="m-text small">Want to sign in from any device? <button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button></p>` : ''}`
+      + `${Session.kind === 'cloud' ? `<p class="m-text small">Run this TapRoll site? <button type="button" class="linkbtn" data-act="setup-guide">Setup guide and Firestore rules</button> · <button type="button" class="linkbtn" data-act="mail-guide">Automatic parent emails</button></p>` : ''}`
       + `</section>`
       + `<nav class="set-legal" aria-label="Policies">${legalLinks(true)}</nav>`, { label: 'Settings' });
     $('#settings-form').addEventListener('submit', (e) => {
@@ -3544,6 +3618,10 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       case 'toggle-pw': togglePassword(el); break;
       case 'au-role': setAuthRole(el.dataset.v); break;
       case 'open-school': openSchoolView(); break;
+      case 'late-pass': openLatePass(); break;
+      case 'mail-auto': setMailAuto(el.dataset.v === 'on'); break;
+      case 'mail-guide': openMailGuide(); break;
+      case 'mail-recheck': loadMail(true); mailChanged(); break;
       case 'hide-invite': ui.hideInvite = true; scheduleRender(); break;
       default: if (act.startsWith('sc-')) schoolAct(act, el); break;
     }
@@ -3616,6 +3694,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     setInterval(() => {
       if (ui.screen !== 'app') return;
       schoolTick();
+      loadMail();
       if (!modal.open || !ui.openStudent) scheduleRender();
       if (modal.open && ui.scDrawer) refreshScDrawer();
     }, 30000);
@@ -3820,7 +3899,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     sid: '', name: '', owner: '', role: null, state: 'off', error: null,
     invite: null, inviteList: [], inviteState: 'idle',
     members: {}, invites: {}, membersLoaded: false,
-    t: {}, date: todayStr(),
+    t: {}, date: todayStr(), passes: [], passSub: null,
     subs: [], staffSubs: [], tSubs: {}, watching: false, autoOpened: false, verifySent: false, busy: false
   };
   const isStaff = () => School.state === 'member' && isStaffRole(School.role);
@@ -3828,11 +3907,11 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   const meUid = () => (School.me ? School.me.uid : '');
 
   function schoolStop() {
-    School.subs.forEach(offSub); School.staffSubs.forEach(offSub);
+    School.subs.forEach(offSub); School.staffSubs.forEach(offSub); offSub(School.passSub);
     Object.keys(School.tSubs).forEach(unwatchTeacher);
     Object.assign(School, {
       kind: null, me: null, sid: '', name: '', owner: '', role: null, state: 'off', error: null, invite: null, inviteList: [], inviteState: 'idle',
-      members: {}, invites: {}, membersLoaded: false, t: {}, date: todayStr(), subs: [], staffSubs: [], tSubs: {},
+      members: {}, invites: {}, membersLoaded: false, t: {}, date: todayStr(), passes: [], passSub: null, subs: [], staffSubs: [], tSubs: {},
       watching: false, autoOpened: false, verifySent: false, busy: false
     });
     ui.scTab = 'live'; ui.scSearch = ''; ui.scAll = false; ui.scDrawer = null; ui.scPanel = false; ui.hideInvite = false;
@@ -3884,6 +3963,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
   }
   function schoolAttach(sid) {
     School.subs.forEach(offSub); School.subs = [];
+    offSub(School.passSub); School.passSub = null; School.passes = [];
     stopStaff();
     Object.assign(School, { sid, name: '', owner: '', role: null, members: {}, invites: {}, membersLoaded: false, error: null });
     if (!sid) { School.state = 'none'; schoolChanged(); return; }
@@ -3900,6 +3980,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       School.role = ROLE_LABEL[m.role] ? m.role : 'teacher';
       School.state = 'member';
       if (isStaffRole(School.role)) startStaff(); else stopStaff();
+      watchPasses();
       if (School.inviteList.some((inv) => inv.sid === sid)) { setInvites(School.inviteList); if (!School.inviteList.length) School.inviteState = 'none'; }
       maybeOpenOffice();
       applySchoolLink();
@@ -3918,6 +3999,17 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       if (School.name && S.settings.school !== School.name && editable()) setSettings({ school: School.name });
       schoolChanged();
     }, () => { /* only members can read it */ }));
+  }
+  // Late passes other teachers in the school sent today. Each teacher's TapRoll applies them to its own classes.
+  function watchPasses() {
+    if (School.kind !== 'cloud' || School.passSub || School.state !== 'member') return;
+    const sid = School.sid, date = todayStr();
+    School.passSub = Cloud.fs.collection(`schools/${sid}/passes`).where('date', '==', date).onSnapshot((qs) => {
+      if (School.sid !== sid) return;
+      School.passes = qs.docs.map((d) => normPass({ ...(d.data() || {}), id: d.id })).filter((x) => x.date === date && x.from.end);
+      applyPasses();
+      scheduleRender();
+    }, (e) => console.warn('TapRoll: late passes from your school stopped updating', e));
   }
   // The teacher was removed from the school (or left on another device).
   function schoolLost() {
@@ -4010,7 +4102,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     if (School.state !== 'member') return;
     if (School.date !== todayStr()) {
       School.date = todayStr();
-      if (School.kind === 'cloud') Object.keys(School.tSubs).forEach(watchDay);
+      if (School.kind === 'cloud') { Object.keys(School.tSubs).forEach(watchDay); offSub(School.passSub); School.passSub = null; School.passes = []; watchPasses(); }
     }
     if (School.kind === 'demo') demoRefreshDays();
   }
@@ -4799,7 +4891,8 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
         + `<p class="m-text small">${esc(text)}</p><div class="row">${staff ? `<button type="button" class="btn" data-act="open-school">${ic('school')} Open School office</button>` : ''}`
         + `${School.role === 'admin' ? `<button type="button" class="btn" data-act="sc-rename">${ic('edit')} Rename school</button>` : ''}`
         + `${owner ? '' : `<button type="button" class="btn ghost danger" data-act="sc-leave">Leave school</button>`}</div>`
-        + (owner ? '<p class="m-text small">You set up this school, so you stay its admin. To hand it to someone else, email us.</p>' : '');
+        + (owner ? '<p class="m-text small">You set up this school, so you stay its admin. To hand it to someone else, email us.</p>' : '')
+        + (School.role === 'admin' ? `<p class="m-text small sc-idline">School ID <code id="sc-id">${esc(School.sid)}</code><button type="button" class="linkbtn" data-act="copy-text" data-target="sc-id">Copy</button></p>` : '');
     }
     let out = '';
     if (School.inviteList.length) {
@@ -4852,7 +4945,9 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
       } catch (ex) {
         pendingSchoolLink = false;
         go.disabled = false; go.textContent = 'Set up school';
-        err.textContent = schoolErrText(ex, 'setting up the school'); err.hidden = false;
+        err.innerHTML = esc(schoolErrText(ex, 'setting up the school'))
+          + (String((ex && ex.code) || '').includes('permission-denied') ? ' <button type="button" class="linkbtn" data-act="setup-guide">Open the setup guide</button>' : '');
+        err.hidden = false;
       }
     });
   }
@@ -5396,6 +5491,347 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     try { localStorage.setItem(DEMO_SCHOOL_KEY, JSON.stringify({ date: todayStr(), base: S.settings.sampleDate, members: School.members, invites: School.invites, t })); } catch (e) { /* storage full or blocked */ }
   }
 
+  /* ============================== Late passes ==============================
+     When a teacher keeps a class past the bell, they send a late pass from that period: the students' tardies in
+     their next class today are excused, with the reason "Held by <teacher> (P1)". A pass covers a class that starts
+     within 30 minutes after the period it came from ended.
+     Passes for your own classes are saved with your attendance (days/<date>.passes). In a school, they're also
+     shared with the school (schools/<sid>/passes/<id>), and every teacher's TapRoll applies them to their own
+     classes, matching students by school key, or by name for students a teacher added themselves. */
+  const PASS_WINDOW = 30;   // minutes after the period ends that the next class can start
+  function normPass(p, id) {
+    const f = isObj(p.from) ? p.from : {};
+    return {
+      id: String(p.id || id || ''), date: String(p.date || ''), at: Number(p.at) || 0,
+      by: String(p.by || ''), byName: String(p.byName || '').slice(0, 80),
+      from: { pid: String(f.pid || ''), num: Number(f.num) || 0, course: String(f.course || '').slice(0, 60), end: /^\d{2}:\d{2}$/.test(f.end) ? f.end : '' },
+      students: (Array.isArray(p.students) ? p.students : []).filter(isObj).slice(0, 80).map((e) => {
+        const out = { id: String(e.id || ''), nk: String(e.nk || '').slice(0, 80), name: String(e.name || '').slice(0, 80) };
+        if (typeof e.sk === 'string' && /^[a-z0-9]{6,40}$/.test(e.sk)) out.sk = e.sk;
+        return out;
+      })
+    };
+  }
+  function cleanPasses(map) {
+    const out = {};
+    if (isObj(map)) for (const [k, v] of Object.entries(map)) if (isObj(v)) { const p = normPass(v, k); if (p.id && p.from.end) out[p.id] = p; }
+    return out;
+  }
+  const passWhy = (pass) => `Held by ${pass.byName || 'another teacher'}${pass.from.num ? ` (P${pass.from.num})` : ''}`;
+  const myId = () => (Session.user && Session.user.id) || '';
+  // Today's passes: your own, plus any shared in your school.
+  function todaysPasses(date = todayStr()) {
+    const out = new Map();
+    for (const p of Object.values((S.passes && S.passes[date]) || {})) out.set(p.id, p);
+    for (const p of School.passes || []) if (p.date === date && !out.has(p.id)) out.set(p.id, p);
+    return [...out.values()];
+  }
+  function passHasStudent(pass, st) {
+    const nk = nameKey(st.first, st.last);
+    return pass.students.some((e) => (pass.by === myId() && e.id === st.id)
+      || (e.sk && st.sk ? e.sk === st.sk : (!!e.nk && e.nk === nk)));
+  }
+  // Does this pass cover the student's class in period p? The class has to start soon after the pass's period ended.
+  function passCovers(pass, st, p) {
+    if (pass.by === myId() && pass.from.pid === p.id) return false;
+    const end = toMin(pass.from.end), start = toMin(p.start);
+    if (end == null || start == null || start < end - 2 || start > end + PASS_WINDOW) return false;
+    return passHasStudent(pass, st);
+  }
+  function passFor(st, p, date) { return todaysPasses(date).find((pass) => passCovers(pass, st, p)) || null; }
+  // Excuses tardies that a pass covers, once per pass. A teacher can still mark one tardy again afterward.
+  // Returns how many it excused. quiet: the caller says so itself.
+  function applyPasses(quiet) {
+    if (!editable() || !ui.ready) return 0;
+    const date = todayStr();
+    const passes = todaysPasses(date);
+    if (!passes.length) return 0;
+    let changed = 0;
+    for (const p of periodList()) {
+      const marks = marksOf(date, p.id);
+      const fixes = [];
+      for (const st of rosterOf(p.id)) {
+        const mk = marks[st.id];
+        if (!mk || mk.s !== 'T' || mk.xt) continue;
+        const pass = passes.find((x) => mk.px !== x.id && passCovers(x, st, p));
+        if (pass) fixes.push({ sid: st.id, mark: { ...mk, s: 'P', xt: 1, why: passWhy(pass), px: pass.id } });
+      }
+      if (fixes.length) { setMarks(date, p.id, fixes); changed += fixes.length; }
+    }
+    if (changed) {
+      if (!quiet) toast({ kind: 'info', text: `Excused ${plural(changed, 'tardy', 'tardies')}`, sub: 'Another class ran late, so the teacher sent a late pass.' });
+      scheduleRender();
+    }
+    return changed;
+  }
+  function sentPasses(p, date) {
+    return Object.values((S.passes && S.passes[date]) || {}).filter((x) => x.from.pid === p.id).sort((a, b) => b.at - a.at);
+  }
+  function latePassNote(p, date) {
+    const list = sentPasses(p, date);
+    if (!list.length) return '';
+    const last = list[0];
+    return `<p class="lp-note">${ic('clock')}<span>Late pass sent at ${esc(fmtClock(last.at))} for ${esc(plural(last.students.length, 'student'))}. Their tardies in their next class today are excused.</span></p>`;
+  }
+  function openLatePass() {
+    const p = S.periods[ui.periodId];
+    if (!p || !editable()) return;
+    const date = todayStr();
+    const marks = marksOf(date, p.id);
+    const roster = rosterOf(p.id);
+    const here = (st) => { const mk = marks[st.id]; return !!mk && (mk.s === 'P' || mk.s === 'T'); };
+    const teacher = S.settings.teacher || (Session.user && Session.user.name) || 'your teacher';
+    const inSchool = School.state === 'member' && Session.kind === 'cloud';
+    const scope = inSchool ? `It works in your classes and in other teachers’ classes at ${esc(School.name || 'your school')}.`
+      : (Session.kind === 'cloud' ? 'It works in your own classes. To excuse students in other teachers’ classes too, join your school in TapRoll (Settings › School).' : 'It works in your own classes.');
+    openModal(`${modalHead('Kept the class late?', `Send a late pass from ${periodLabel(p)}${p.course ? ` ${p.course}` : ''}. Tardies in each student’s next class today are excused.`)}`
+      + `<form id="lp-form" class="m-body"><div class="lp-tools"><span class="m-text small">The reason shows as “${esc(passWhy({ byName: teacher, from: { num: p.num } }))}”.</span>`
+      + `<button type="button" class="linkbtn" id="lp-all">Select all</button><button type="button" class="linkbtn" id="lp-none">Clear</button></div>`
+      + `<ul class="lp-list">${roster.map((st) => `<li><label class="check"><input type="checkbox" name="lp-s" value="${esc(st.id)}" ${here(st) ? 'checked' : ''}> ${esc(fullName(st))}<small>${esc(marks[st.id] ? markLabel(marks[st.id]) : 'Not marked')}</small></label></li>`).join('')}</ul>`
+      + `<p class="m-text small">${scope} Students who were here are selected.</p>`
+      + `<p class="m-text small err-text" id="lp-err" hidden></p>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary" id="lp-go">Send late pass</button></div></form>`, { label: 'Late pass' });
+    const boxes = () => Array.from(document.querySelectorAll('#lp-form input[name="lp-s"]'));
+    const count = () => {
+      const n = boxes().filter((b) => b.checked).length;
+      $('#lp-go').textContent = n ? `Send late pass for ${plural(n, 'student')}` : 'Send late pass';
+      if (n) $('#lp-err').hidden = true;
+    };
+    $('#lp-all').addEventListener('click', () => { boxes().forEach((b) => { b.checked = true; }); count(); });
+    $('#lp-none').addEventListener('click', () => { boxes().forEach((b) => { b.checked = false; }); count(); });
+    $('#lp-form').addEventListener('change', count);
+    count();
+    $('#lp-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const ids = boxes().filter((b) => b.checked).map((b) => b.value);
+      if (!ids.length) { const err = $('#lp-err'); err.textContent = 'Pick at least one student.'; err.hidden = false; return; }
+      const pass = normPass({
+        id: 'lp' + rid(10), date, at: Date.now(), by: myId(), byName: teacher,
+        from: { pid: p.id, num: p.num, course: p.course, end: p.end },
+        students: ids.map((id) => S.students[id]).filter(Boolean).map((st) => ({ id: st.id, sk: st.sk, nk: nameKey(st.first, st.last), name: fullName(st) }))
+      });
+      addPass(pass);
+      closeModal();
+      const mine = applyPasses(true);
+      const here = mine ? `Excused ${plural(mine, 'tardy', 'tardies')} in your classes.` : '';
+      toast({ kind: 'ok', text: `Late pass sent for ${plural(pass.students.length, 'student')}`, sub: inSchool ? `${here ? `${here} ` : ''}Their next teachers’ TapRoll excuses the tardy.` : (here || 'Tardies in their next class are excused.'), actions: [{ label: 'Undo', run: () => removePass(pass) }] });
+      scheduleRender();
+    });
+  }
+  function addPass(pass) {
+    ensureWs();
+    const day = S.passes[pass.date] || (S.passes[pass.date] = {});
+    day[pass.id] = pass;
+    Store.persist({ doc: 'day', date: pass.date, patch: { date: pass.date, passes: { [pass.id]: pass } } });
+    if (School.state === 'member' && School.kind === 'cloud') {
+      const { id, ...rest } = pass;
+      Cloud.fs.doc(`schools/${School.sid}/passes/${id}`).set(rest).catch((e) => toast({ kind: 'warn', text: 'The late pass reached only your classes', sub: schoolErrText(e, 'sharing it with your school') }));
+    }
+  }
+  // Undo: the pass is withdrawn and the tardies it excused in your own classes come back.
+  function removePass(pass) {
+    const day = S.passes[pass.date];
+    if (day) delete day[pass.id];
+    Store.persist({ doc: 'day', date: pass.date, patch: { date: pass.date, passes: { [pass.id]: null } } });
+    if (School.state === 'member' && School.kind === 'cloud') Cloud.fs.doc(`schools/${School.sid}/passes/${pass.id}`).delete().catch(() => {});
+    for (const p of periodList()) {
+      const marks = marksOf(pass.date, p.id);
+      const back = Object.entries(marks).filter(([, mk]) => mk.px === pass.id && mk.xt).map(([sid, mk]) => ({ sid, mark: { s: 'T', t: mk.t, m: mk.m } }));
+      if (back.length) setMarks(pass.date, p.id, back);
+    }
+    toast({ kind: 'info', text: 'Late pass withdrawn' });
+    scheduleRender();
+  }
+
+  /* ============================== Automatic parent emails ==============================
+     A small sender that the site's owner runs on Cloudflare (taproll-mail-worker.js, see openMailGuide) emails the
+     parents of students marked absent or tardy a few minutes after each class ends, from the site's own address,
+     with replies going to the teacher. It works for teachers in the schools the owner lists, and each teacher can
+     turn it off (mailAuto: false in their profile). Each run is recorded at site/mail:
+       { lastRun, ok, error, sent, from, schools: [school IDs, or '*'], delay: minutes after class }
+     Marks it emailed get n (when) and na (automatically). */
+  // state: idle (not checked yet), done, blocked (rules), error. busy: a check is on its way.
+  const Mail = { state: 'idle', busy: false, data: null, at: 0, tzTried: false };
+  const MAIL_STALE = 40 * 60000;   // the sender runs every 10 minutes; after this long it has stopped
+  function mailReset() { Mail.state = 'idle'; Mail.busy = false; Mail.data = null; Mail.at = 0; Mail.tzTried = false; }
+  // Checks site/mail, at most every maxAge ms unless forced.
+  function loadMail(force, maxAge = 10 * 60000) {
+    if (Session.kind !== 'cloud' || !Cloud.fs) return;
+    if (Mail.busy || (!force && Mail.at && Date.now() - Mail.at < maxAge)) return;
+    Mail.busy = true;
+    const uid = Session.user && Session.user.id;
+    const done = (state, data) => {
+      if (!Session.user || Session.user.id !== uid) return;
+      Mail.busy = false; Mail.state = state; Mail.data = data; Mail.at = Date.now();
+      mailChanged();
+    };
+    Cloud.fs.doc('site/mail').get().then((snap) => done('done', snap.exists ? (snap.data() || {}) : null),
+      (e) => done(String((e && e.code) || '') === 'permission-denied' ? 'blocked' : 'error', null));
+  }
+  function mailChanged() {
+    const sec = $('#mail-sec');
+    if (sec) sec.innerHTML = mailSectionInner();
+    if (ui.parentsOpen) openParentEmails(true);
+    if (ui.openStudent) refreshStudent();
+    scheduleRender();
+  }
+  const tzName = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } };
+  // The sender works out "today" and when classes end in each teacher's own time zone.
+  function syncMailTz() {
+    if (Session.kind !== 'cloud' || ui.readOnly || Mail.tzTried) return;
+    Mail.tzTried = true;
+    const tz = tzName();
+    if (tz && S.settings.mailTz !== tz) setSettings({ mailTz: tz });
+  }
+  const mailFrom = (d) => { const m = /<([^>]+)>/.exec(String((d && d.from) || '')); return m ? m[1] : String((d && d.from) || '').trim(); };
+  /* What automatic emails do for this teacher now. auto: TapRoll sends them. why says what's going on:
+     on, trouble (the last run hit a problem), off (turned off), stalled (the sender stopped), approve (school not
+     turned on), school (not in a school), none (not set up on this site), blocked (rules), unknown (couldn't
+     check), loading, device, demo. */
+  function mailInfo() {
+    if (Session.kind === 'demo') return { auto: false, why: 'demo' };
+    if (Session.kind !== 'cloud') return { auto: false, why: 'device' };
+    if (Mail.state === 'idle') return { auto: false, why: 'loading' };
+    if (Mail.state === 'blocked') return { auto: false, why: 'blocked' };
+    if (Mail.state === 'error') return { auto: false, why: 'unknown' };
+    const d = Mail.data;
+    if (!d || !Number(d.lastRun)) return { auto: false, why: 'none' };
+    const inSchool = School.kind === 'cloud' && School.state === 'member' && !!School.sid;
+    const list = Array.isArray(d.schools) ? d.schools : [];
+    const base = { from: mailFrom(d), delay: Number(d.delay) >= 0 ? Number(d.delay) : 5, last: Number(d.lastRun), error: String(d.error || '') };
+    if (!inSchool) return { ...base, auto: false, why: list.includes('*') ? 'school' : (School.state === 'loading' ? 'loading' : 'school') };
+    if (!list.includes('*') && !list.includes(School.sid)) return { ...base, auto: false, why: 'approve' };
+    if (S.settings.mailAuto === false) return { ...base, auto: false, why: 'off' };
+    if (Date.now() - base.last > MAIL_STALE) return { ...base, auto: false, why: 'stalled' };
+    return { ...base, auto: true, why: d.ok === false ? 'trouble' : 'on' };
+  }
+  const autoToday = (date) => date === todayStr() && mailInfo().auto;
+  function setMailAuto(on) {
+    if (Session.kind !== 'cloud' || !editable()) return;
+    if (on === (S.settings.mailAuto !== false)) return;
+    setSettings(on ? { mailAuto: true, mailSince: Date.now(), mailTz: tzName() || S.settings.mailTz || '' } : { mailAuto: false });
+    toast(on ? { kind: 'ok', text: 'Automatic parent emails are on', sub: 'For classes that end from now on.' } : { kind: 'info', text: 'Automatic parent emails are off', sub: 'Send them yourself with Email parents.' });
+    mailChanged();
+  }
+
+  /* ----- Settings ----- */
+  function mailSectionInner() {
+    const info = mailInfo();
+    const manual = '<p class="m-text small">TapRoll writes the email to the parent of a student marked absent or tardy. It opens in your own email so you can check it and send it. Add parent emails in each student’s details.</p>';
+    const via = `<div class="field"><span>Open emails you send in (this device)</span>${viaSeg()}</div>`;
+    const status = (kind, icon, html, extra = '') => `<div class="opstatus ${kind}">${ic(icon)}<div class="op-body"><p>${html}</p>${extra}</div></div>`;
+    const again = Mail.busy ? '<button type="button" class="btn sm ghost" disabled><span class="spin" aria-hidden="true"></span>Checking…</button>'
+      : '<button type="button" class="btn sm ghost" data-act="mail-recheck">Check again</button>';
+    const guide = `<div class="row"><button type="button" class="btn sm" data-act="mail-guide">How to set it up</button>${again}</div>`;
+    const seg = `<div class="field"><span>Send parent emails</span><div class="seg" role="radiogroup" aria-label="Send parent emails">`
+      + `<button type="button" role="radio" aria-checked="${S.settings.mailAuto !== false}" data-act="mail-auto" data-v="on" ${editable() ? '' : 'disabled'}>Automatically after class</button>`
+      + `<button type="button" role="radio" aria-checked="${S.settings.mailAuto === false}" data-act="mail-auto" data-v="off" ${editable() ? '' : 'disabled'}>Myself</button></div></div>`;
+    const school = esc(School.name || 'your school');
+    let top = '';
+    switch (info.why) {
+      case 'demo':
+        return `${manual}<p class="m-text small">With cloud sign-in, a school can also have TapRoll email parents automatically a few minutes after each class ends. In this example, nothing is sent.</p>${via}`;
+      case 'device':
+        return manual + via;
+      case 'loading':
+        return `<p class="m-text small">Checking automatic emails…</p>${via}`;
+      case 'blocked':
+        top = status('warn', 'alert', 'TapRoll couldn’t check automatic emails. If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.', `<div class="row"><button type="button" class="btn sm" data-act="setup-guide">Setup guide</button>${again}</div>`);
+        return top + manual + via;
+      case 'unknown':
+        return `${manual}<p class="m-text small">TapRoll couldn’t check whether automatic emails are on. Check your connection.</p><div class="row">${again}</div>${via}`;
+      case 'none':
+        return `${manual}<p class="m-text small">TapRoll can also email parents automatically after class, from the site’s own address. It isn’t set up on this TapRoll site yet.</p>${guide}${via}`;
+      case 'school':
+        return `${manual}<p class="m-text small">Automatic emails after class are for teachers in a school. When your school invites you, join it under School above.</p>${via}`;
+      case 'approve': {
+        const admin = School.role === 'admin';
+        const ask = admin
+          ? `To turn them on, email <a href="mailto:${esc(SUPPORT_EMAIL)}">${esc(SUPPORT_EMAIL)}</a> with your school ID, <code>${esc(School.sid)}</code>.`
+          : `Your school’s admin can ask TapRoll to turn them on.`;
+        return `${manual}<p class="m-text small">Automatic emails after class aren’t turned on for ${school} yet. ${ask}</p><div class="row">${again}</div>${via}`;
+      }
+      default: break;
+    }
+    const from = info.from ? ` from <b>${esc(info.from)}</b>` : '';
+    const reply = Session.user && Session.user.email ? ` Replies go to ${esc(School.me && School.me.email ? School.me.email : Session.user.email)}.` : '';
+    if (info.why === 'off') top = `<p class="m-text small">You send parent emails yourself. TapRoll writes each one and opens it in your email.</p>`;
+    else if (info.why === 'stalled') top = status('warn', 'alert', `Automatic emails stopped running ${esc(sinceText(info.last))}. Until they’re back, send parent emails yourself with Email parents.`, `<div class="row">${again}</div>`);
+    else {
+      const when = info.delay ? `About ${esc(plural(info.delay, 'minute'))} after each class ends` : 'When each class ends';
+      top = `<p class="m-text small">${when}, TapRoll emails the parents of students you marked absent or tardy${from}.${reply} Excused tardies aren’t emailed.</p>`;
+      if (info.why === 'trouble') top += status('warn', 'alert', `The last try hit a problem${info.error ? `: ${esc(info.error)}` : ''}. TapRoll tries again every few minutes. You can also send emails yourself.`);
+    }
+    const tip = info.why === 'off' ? 'Add parent emails in each student’s details.' : 'Only students marked absent or tardy get an email, so before class ends, mark anyone who didn’t tap in. Add parent emails in each student’s details.';
+    return `${seg}${top}<p class="m-text small">${tip}</p>${via}`;
+  }
+  const mailSettingsSection = () => `<section class="dsec" aria-label="Parent emails"><h3>Parent emails</h3><div class="m-body" id="mail-sec">${mailSectionInner()}</div></section>`;
+  function sinceText(ms) {
+    if (!ms) return '';
+    const d = dateStr(new Date(ms));
+    return `${d === todayStr() ? 'today' : `on ${fmtDateShort(d)}`} at ${fmtClock(ms)}`;
+  }
+
+  /* ----- In a class ----- */
+  // A line under the roster tools: when parents get emailed, or that they were.
+  function autoMailNote(p, date) {
+    if (!editable() || date !== todayStr()) return '';
+    const info = mailInfo();
+    if (!info.auto) return '';
+    const marks = marksOf(date, p.id);
+    const roster = rosterOf(p.id);
+    const due = roster.filter((st) => needsEmail(marks[st.id]));
+    const done = due.filter((st) => marks[st.id].na).length;
+    const failed = due.filter((st) => !marks[st.id].n && marks[st.id].nf).length;
+    const waiting = due.filter((st) => !marks[st.id].n && !marks[st.id].nf && st.parents.length).length;
+    const noEmail = due.filter((st) => !marks[st.id].n && !st.parents.length).length;
+    const ended = phaseOf(p, date) === 'done';
+    const unmarked = ended ? roster.filter((st) => !marks[st.id]).length : 0;
+    const end = toMin(p.end);
+    const parts = [];
+    if (done) parts.push(`Parents of ${plural(done, 'student')} were emailed automatically.`);
+    if (waiting) parts.push(`Parents of ${plural(waiting, done ? 'more student' : 'student', done ? 'more students' : 'students')} get an email automatically${end == null ? ' after class' : ` at about ${fmtHMap(minToHM(Math.min(end + info.delay, 1439)))}`}.`);
+    if (failed) parts.push(`TapRoll couldn’t email the parents of ${plural(failed, 'student')}. Check ${failed === 1 ? 'the address' : 'their addresses'}, then use Email parents.`);
+    if (noEmail) parts.push(`${plural(noEmail, 'student')} ${noEmail === 1 ? 'has' : 'have'} no parent email.`);
+    if (unmarked) parts.push(`${plural(unmarked, 'student')} ${unmarked === 1 ? 'isn’t' : 'aren’t'} marked, so ${unmarked === 1 ? 'their parent isn’t' : 'their parents aren’t'} emailed.`);
+    if (info.why === 'trouble' && waiting) parts.push('Automatic emails hit a problem on the last try.');
+    if (!parts.length) return '';
+    return `<p class="lp-note am-note">${ic('mail')}<span>${esc(parts.join(' '))}</span></p>`;
+  }
+
+  /* ----- Setup guide for the site's owner ----- */
+  function openMailGuide() {
+    const info = mailInfo();
+    let st;
+    if (BUILD_TARGET !== 'site') st = { kind: 'info', icon: 'info', text: 'This preview can’t send email. Follow these steps for your hosted TapRoll site.' };
+    else if (Session.kind !== 'cloud') st = { kind: 'info', icon: 'info', text: 'Automatic emails need cloud sign-in. Set that up first.' };
+    else if (info.why === 'blocked') st = { kind: 'warn', icon: 'alert', text: 'Firestore didn’t let TapRoll check. Paste the latest rules (step 1).' };
+    else if (info.why === 'none' || info.why === 'loading') st = { kind: 'info', icon: 'info', text: 'Automatic emails aren’t running on this site yet.' };
+    else if (info.why === 'stalled') st = { kind: 'warn', icon: 'alert', text: `The sender last ran ${sinceText(info.last)}. Check its Cron Trigger (step 7).` };
+    else if (Mail.data && Mail.data.ok === false) st = { kind: 'warn', icon: 'alert', text: `The sender is running, but its last try hit a problem: ${Mail.data.error || 'unknown'}.` };
+    else st = { kind: 'ok', icon: 'check', text: `Automatic emails are running${info.from ? `, from ${info.from}` : ''}.` };
+    const domain = BUILD_TARGET === 'site' && location.hostname && !/^(localhost|127\.|\[)/.test(location.hostname) ? location.hostname : 'yourdomain.com';
+    const project = Cloud.cfg && Cloud.cfg.projectId ? `?project=${encodeURIComponent(Cloud.cfg.projectId)}` : '';
+    const vars = [
+      ['RESEND_API_KEY', 'Secret', 'the key from step 3'],
+      ['FIREBASE_SERVICE_ACCOUNT', 'Secret', 'everything in the key file from step 4'],
+      ['MAIL_FROM', 'Text', `TapRoll &lt;noreply@${esc(domain)}&gt;`],
+      ['SCHOOLS', 'Text', 'the IDs of the schools to turn on, separated by commas. A school’s admin sees its ID in Settings › School']
+    ];
+    openModal(`${modalHead('Set up automatic parent emails', 'A few minutes after each class ends, TapRoll emails the parents of students marked absent or tardy, from your own address. Replies go to the teacher.')}<div class="m-body">`
+      + `<div class="opstatus ${st.kind}">${ic(st.icon)}<p>${esc(st.text)}</p></div>`
+      + `<p class="m-text small">It uses three free accounts: <b>Resend</b> sends the email, <b>Cloudflare</b> runs the sender every 10 minutes, and a <b>Google Cloud</b> service account lets it read attendance.</p><ol class="steps">`
+      + setupStep('Paste the latest Firestore rules', 'They’re in <button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button>, step 6. They let TapRoll see that automatic emails are running.')
+      + setupStep('Add your domain to Resend', `Sign up at <a href="https://resend.com" target="_blank" rel="noopener">resend.com</a>, open <b>Domains</b>, and add <code>${esc(domain)}</code>. Add the DNS records Resend lists in Cloudflare under <b>DNS › Records</b> (or let Resend add them), then click <b>Verify</b>. Email you receive at your domain keeps working.`)
+      + setupStep('Make a Resend API key', 'In Resend, open <b>API Keys › Create API key</b>, choose <b>Sending access</b> for your domain, and copy the key.')
+      + setupStep('Make a Google service account', `Open <a href="https://console.cloud.google.com/iam-admin/serviceaccounts${esc(project)}" target="_blank" rel="noopener">Service accounts</a> for your Firebase project and choose <b>Create service account</b>. Name it taproll-mail and give it the role <b>Cloud Datastore User</b>. Then open it and choose <b>Keys › Add key › Create new key › JSON</b>. Keep the file that downloads private.`)
+      + setupStep('Create the Cloudflare Worker', `In Cloudflare, open <b>Workers &amp; Pages › Create › Start with Hello World</b>, name it taproll-mail, and click <b>Deploy</b>. Click <b>Edit code</b>, replace everything with <a href="${esc(WORKER_URL)}" target="_blank" rel="noopener">the TapRoll sender code</a>, and click <b>Deploy</b>.`)
+      + setupStep('Add its settings', `In the Worker, open <b>Settings › Variables and Secrets</b> and add these, then deploy:<ul class="mg-vars">${vars.map(([k, t, v]) => `<li><code>${k}</code> <span class="pill e">${t}</span> ${v}</li>`).join('')}</ul>`)
+      + setupStep('Run it every 10 minutes', 'Open <b>Settings › Trigger Events</b>, add a <b>Cron Trigger</b>, and enter <code class="nw">*/10 * * * *</code>. Within 10 minutes, Settings › Parent emails shows that automatic emails are on.')
+      + `</ol><p class="m-text small">Only schools listed in SCHOOLS get automatic emails, so strangers who sign up can’t send email from your address. Each teacher can turn them off. During school hours, each run reads about 5 Firestore documents per teacher, so for more than about 20 teachers, move Firebase to the pay-as-you-go Blaze plan. Resend’s free plan sends 100 emails a day.</p></div>`,
+    { cls: 'wide', label: 'Set up automatic parent emails' });
+  }
+
   /* ============================== Accounts ==============================
      Device accounts need no setup. They live in this browser, with passwords hashed (PBKDF2, SHA-256).
      Cloud accounts use Firebase Authentication once config.js holds a Firebase web config.
@@ -5548,6 +5984,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     const host = $('#toasts');
     if (host) host.innerHTML = '';
     schoolStop();
+    mailReset();
     Store.close();
     Session.kind = null;
     Session.user = null;
@@ -5589,6 +6026,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
     Session.office = !!pending.office;
     schoolStartCloud(user);
     Store.openFirestore(Cloud.fs, user.uid);
+    loadMail(true);
     // First sign-in: create the teacher's profile document.
     Store.onNewProfile = () => {
       const name = pending.name || user.displayName || '';
@@ -6265,6 +6703,23 @@ service cloud.firestore {
       allow delete: if signedIn() && (resource == null
         || (verified() && resource.data.email == myEmail()) || isStaff(resource.data.sid));
     }
+
+    // Late passes: a teacher who kept a class late excuses those students' tardies in
+    // their next class. Every member's TapRoll applies them to its own classes.
+    match /schools/{sid}/passes/{passId} {
+      allow read: if isMember(sid);
+      allow create: if isMember(sid) && request.resource.data.by == me()
+        && request.resource.data.keys().hasOnly(['date', 'at', 'by', 'byName', 'from', 'students'])
+        && request.resource.data.date is string && request.resource.data.from is map
+        && request.resource.data.byName is string && request.resource.data.byName.size() <= 80
+        && request.resource.data.students is list && request.resource.data.students.size() <= 80;
+      allow delete: if isMember(sid) && resource.data.by == me();
+    }
+    // Site status, like whether automatic parent emails are running. Only the
+    // site's own email sender (with its service account) writes here.
+    match /site/{doc} {
+      allow read: if signedIn();
+    }
   }
 }`;
   function cloudStatus() {
@@ -6288,10 +6743,11 @@ service cloud.firestore {
       + setupStep('Turn on sign-in', 'Open <b>Authentication</b>, click <b>Get started</b>, then enable <b>Email/Password</b> and <b>Google</b>.')
       + setupStep('Allow your site', `In Authentication, open <b>Settings › Authorized domains</b> and add <code>${esc(host)}</code>.`)
       + setupStep('Create the database', 'Open <b>Firestore Database</b>, click <b>Create database</b>, keep the defaults, and start in <b>production mode</b>.')
-      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before schools existed, paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
+      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before late passes and automatic parent emails, paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
       + setupStep('Fill in config.js', 'Copy the <code>const firebaseConfig = { … };</code> block from step 2 and paste it into <code>config.js</code> in place of everything there. Upload <code>config.js</code> to the same folder as <code>app.html</code>. You can find the block again later under <b>Project settings › General › Your apps</b>.')
       + setupStep('Reload TapRoll', 'GitHub can take a few minutes to update. Then the sign-in page shows <b>Continue with Google</b>, and classes sync across devices.')
-      + `</ol><p class="m-text small">Accounts made on a device before the switch stay on that device. To move classes over, download a backup in Settings, sign in with your new account, and restore it.</p></div>`,
+      + `</ol><p class="m-text small">Accounts made on a device before the switch stay on that device. To move classes over, download a backup in Settings, sign in with your new account, and restore it.</p>`
+      + `<p class="m-text small">Next, if you like: <button type="button" class="linkbtn" data-act="mail-guide">Set up automatic parent emails</button></p></div>`,
     { cls: 'wide', label: 'Set up cloud sign-in' });
   }
 
