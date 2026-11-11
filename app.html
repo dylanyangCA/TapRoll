@@ -1115,6 +1115,9 @@ code.nw { white-space: nowrap; }
 .sent.failed .ic { color: var(--a); }
 .warn-line { display: flex; align-items: flex-start; gap: 6px; }
 .warn-line .ic { width: 15px; height: 15px; color: var(--t); flex: none; margin-top: 2px; }
+.am-offer { flex-wrap: wrap; align-items: center; }
+.am-offer > span:first-of-type { flex: 1 1 220px; }
+.am-acts { display: flex; gap: 8px; margin-left: auto; }
 
 </style>
 <script>window.__taprollCfg={loaded:false,missing:false,error:null};window.addEventListener('error',function(e){if(e&&/config\.js/.test(e.filename||''))window.__taprollCfg.error=String(e.message||'error').replace(/^Uncaught\s+/,'');});</script>
@@ -1666,7 +1669,7 @@ code.nw { white-space: nowrap; }
       this.loaded.settings = true;
       if (this.ws === null || (S.settings.ws || '') !== this.ws) this.switchWs(S.settings.ws || '');
       if (!snap.exists && !this.profileWritten && this.onNewProfile) { this.profileWritten = true; this.onNewProfile(); }
-      if (snap.exists) syncMailTz();
+      if (snap.exists) { syncMailTz(); touchActive(); }
       schoolSync();
       dataChanged();
     },
@@ -2613,7 +2616,7 @@ code.nw { white-space: nowrap; }
       + `${editable() ? `<div class="rtools-actions">${c.A + c.T ? `<button class="btn sm" data-act="email-parents">${ic('mail')} Email parents${pendingEmails(p, date) ? ` <b class="cnt">${pendingEmails(p, date)}</b>` : ''}</button>` : ''}`
         + `${isToday && phaseOf(p) !== 'later' && roster.length ? `<button class="btn sm" data-act="late-pass">${ic('clock')} Kept class late</button>` : ''}`
         + `<button class="btn sm" data-act="mark-rest" ${c.U ? '' : 'disabled'}>Mark ${c.U} not-yet absent</button><button class="btn sm primary" data-act="add-students">${ic('plus')} Add students</button></div>` : ''}</div>`
-      + latePassNote(p, date) + autoMailNote(p, date);
+      + latePassNote(p, date) + autoMailNote(p, date) + autoMailOffer(p, date);
     let grid;
     if (!roster.length) {
       grid = `<div class="empty"><h3>No students in ${esc(periodLabel(p))} yet</h3><p>Paste names from your class list or a spreadsheet. You can write or link each student’s NFC tag afterward.</p>`
@@ -3695,6 +3698,7 @@ code.nw { white-space: nowrap; }
       if (ui.screen !== 'app') return;
       schoolTick();
       loadMail();
+      touchActive();
       if (!modal.open || !ui.openStudent) scheduleRender();
       if (modal.open && ui.scDrawer) refreshScDrawer();
     }, 30000);
@@ -5646,14 +5650,16 @@ code.nw { white-space: nowrap; }
   /* ============================== Automatic parent emails ==============================
      A small sender that the site's owner runs on Cloudflare (taproll-mail-worker.js, see openMailGuide) emails the
      parents of students marked absent or tardy a few minutes after each class ends, from the site's own address,
-     with replies going to the teacher. It works for teachers in the schools the owner lists, and each teacher can
-     turn it off (mailAuto: false in their profile). Each run is recorded at site/mail:
-       { lastRun, ok, error, sent, from, schools: [school IDs, or '*'], delay: minutes after class }
-     Marks it emailed get n (when) and na (automatically). */
+     with replies going to the teacher. Any teacher can turn it on (mailAuto: true in their profile); in the schools
+     the owner lists it's on unless a teacher turns it off (mailAuto: false). Each run is recorded at site/mail:
+       { lastRun, ok, error, sent, from, schools: ['*' when any teacher can turn it on, then listed school IDs],
+         delay: minutes after class }
+     Marks it emailed get n (when) and na (automatically). The sender looks only at teachers who used TapRoll in the
+     last day, so TapRoll notes lastActive in the profile every few hours. */
   // state: idle (not checked yet), done, blocked (rules), error. busy: a check is on its way.
-  const Mail = { state: 'idle', busy: false, data: null, at: 0, tzTried: false };
+  const Mail = { state: 'idle', busy: false, data: null, at: 0, tzTried: false, activeTry: 0 };
   const MAIL_STALE = 40 * 60000;   // the sender runs every 10 minutes; after this long it has stopped
-  function mailReset() { Mail.state = 'idle'; Mail.busy = false; Mail.data = null; Mail.at = 0; Mail.tzTried = false; }
+  function mailReset() { Mail.state = 'idle'; Mail.busy = false; Mail.data = null; Mail.at = 0; Mail.tzTried = false; Mail.activeTry = 0; }
   // Checks site/mail, at most every maxAge ms unless forced.
   function loadMail(force, maxAge = 10 * 60000) {
     if (Session.kind !== 'cloud' || !Cloud.fs) return;
@@ -5683,11 +5689,22 @@ code.nw { white-space: nowrap; }
     const tz = tzName();
     if (tz && S.settings.mailTz !== tz) setSettings({ mailTz: tz });
   }
+  // Notes every few hours that this teacher uses TapRoll, and keeps the profile's email current (replies to
+  // automatic emails go there when the teacher isn't in a school).
+  function touchActive() {
+    if (Session.kind !== 'cloud' || ui.readOnly || !Session.user) return;
+    const now = Date.now();
+    const email = Session.user.email || '';
+    const fresh = now - (Number(S.settings.lastActive) || 0) < 4 * 3600000;
+    if ((fresh && (!email || S.settings.email === email)) || now - Mail.activeTry < 30 * 60000) return;
+    Mail.activeTry = now;
+    setSettings(email && S.settings.email !== email ? { lastActive: now, email } : { lastActive: now });
+  }
   const mailFrom = (d) => { const m = /<([^>]+)>/.exec(String((d && d.from) || '')); return m ? m[1] : String((d && d.from) || '').trim(); };
   /* What automatic emails do for this teacher now. auto: TapRoll sends them. why says what's going on:
-     on, trouble (the last run hit a problem), off (turned off), stalled (the sender stopped), approve (school not
-     turned on), school (not in a school), none (not set up on this site), blocked (rules), unknown (couldn't
-     check), loading, device, demo. */
+     on, trouble (the last run hit a problem), off (turned off, or not turned on yet: offer), stalled (the sender
+     stopped), approve (school not turned on), school (not in a school), none (not set up on this site), blocked
+     (rules), unknown (couldn't check), loading, device, demo. listed: the school has them on by default. */
   function mailInfo() {
     if (Session.kind === 'demo') return { auto: false, why: 'demo' };
     if (Session.kind !== 'cloud') return { auto: false, why: 'device' };
@@ -5698,19 +5715,25 @@ code.nw { white-space: nowrap; }
     if (!d || !Number(d.lastRun)) return { auto: false, why: 'none' };
     const inSchool = School.kind === 'cloud' && School.state === 'member' && !!School.sid;
     const list = Array.isArray(d.schools) ? d.schools : [];
-    const base = { from: mailFrom(d), delay: Number(d.delay) >= 0 ? Number(d.delay) : 5, last: Number(d.lastRun), error: String(d.error || '') };
-    if (!inSchool) return { ...base, auto: false, why: list.includes('*') ? 'school' : (School.state === 'loading' ? 'loading' : 'school') };
-    if (!list.includes('*') && !list.includes(School.sid)) return { ...base, auto: false, why: 'approve' };
-    if (S.settings.mailAuto === false) return { ...base, auto: false, why: 'off' };
+    const open = list.includes('*');
+    const listed = inSchool && list.includes(School.sid);
+    const base = { from: mailFrom(d), delay: Number(d.delay) >= 0 ? Number(d.delay) : 5, last: Number(d.lastRun), error: String(d.error || ''), listed };
+    if (!open && !listed) return { ...base, auto: false, why: inSchool ? 'approve' : (School.state === 'loading' ? 'loading' : 'school') };
+    // On by default in a listed school; anywhere else, once the teacher turns them on.
+    if (!(listed ? S.settings.mailAuto !== false : S.settings.mailAuto === true)) return { ...base, auto: false, why: 'off', offer: !listed && S.settings.mailAuto === undefined };
     if (Date.now() - base.last > MAIL_STALE) return { ...base, auto: false, why: 'stalled' };
     return { ...base, auto: true, why: d.ok === false ? 'trouble' : 'on' };
   }
   const autoToday = (date) => date === todayStr() && mailInfo().auto;
+  // The teacher's own choice, whether or not the sender is running right now.
+  const mailChosen = (info) => (info.listed ? S.settings.mailAuto !== false : S.settings.mailAuto === true);
   function setMailAuto(on) {
     if (Session.kind !== 'cloud' || !editable()) return;
-    if (on === (S.settings.mailAuto !== false)) return;
+    // Nothing to change, except saving a first "No thanks" so TapRoll stops offering.
+    if (on === mailChosen(mailInfo()) && (on || S.settings.mailAuto === false)) return;
     setSettings(on ? { mailAuto: true, mailSince: Date.now(), mailTz: tzName() || S.settings.mailTz || '' } : { mailAuto: false });
-    toast(on ? { kind: 'ok', text: 'Automatic parent emails are on', sub: 'For classes that end from now on.' } : { kind: 'info', text: 'Automatic parent emails are off', sub: 'Send them yourself with Email parents.' });
+    toast(on ? { kind: 'ok', text: 'Automatic parent emails are on', sub: 'For classes that end from now on.' }
+      : { kind: 'info', text: 'Automatic parent emails are off', sub: 'Send them yourself with Email parents. To change this, go to Settings › Parent emails.' });
     mailChanged();
   }
 
@@ -5723,9 +5746,10 @@ code.nw { white-space: nowrap; }
     const again = Mail.busy ? '<button type="button" class="btn sm ghost" disabled><span class="spin" aria-hidden="true"></span>Checking…</button>'
       : '<button type="button" class="btn sm ghost" data-act="mail-recheck">Check again</button>';
     const guide = `<div class="row"><button type="button" class="btn sm" data-act="mail-guide">How to set it up</button>${again}</div>`;
+    const chosen = mailChosen(info);
     const seg = `<div class="field"><span>Send parent emails</span><div class="seg" role="radiogroup" aria-label="Send parent emails">`
-      + `<button type="button" role="radio" aria-checked="${S.settings.mailAuto !== false}" data-act="mail-auto" data-v="on" ${editable() ? '' : 'disabled'}>Automatically after class</button>`
-      + `<button type="button" role="radio" aria-checked="${S.settings.mailAuto === false}" data-act="mail-auto" data-v="off" ${editable() ? '' : 'disabled'}>Myself</button></div></div>`;
+      + `<button type="button" role="radio" aria-checked="${chosen}" data-act="mail-auto" data-v="on" ${editable() ? '' : 'disabled'}>Automatically after class</button>`
+      + `<button type="button" role="radio" aria-checked="${!chosen}" data-act="mail-auto" data-v="off" ${editable() ? '' : 'disabled'}>Myself</button></div></div>`;
     const school = esc(School.name || 'your school');
     let top = '';
     switch (info.why) {
@@ -5754,11 +5778,12 @@ code.nw { white-space: nowrap; }
       default: break;
     }
     const from = info.from ? ` from <b>${esc(info.from)}</b>` : '';
-    const reply = Session.user && Session.user.email ? ` Replies go to ${esc(School.me && School.me.email ? School.me.email : Session.user.email)}.` : '';
-    if (info.why === 'off') top = `<p class="m-text small">You send parent emails yourself. TapRoll writes each one and opens it in your email.</p>`;
+    const reply = Session.user && Session.user.email ? ` Replies go to ${esc(info.listed && School.me && School.me.email ? School.me.email : Session.user.email)}.` : '';
+    const when = info.delay ? `About ${esc(plural(info.delay, 'minute'))} after each class ends` : 'When each class ends';
+    if (info.why === 'off' && info.offer) top = `<p class="m-text small">TapRoll can email parents for you. ${when}, it emails the parents of students you marked absent or tardy${from}.${reply} To turn it on, choose Automatically after class.</p>`;
+    else if (info.why === 'off') top = `<p class="m-text small">You send parent emails yourself. TapRoll writes each one and opens it in your email.</p>`;
     else if (info.why === 'stalled') top = status('warn', 'alert', `Automatic emails stopped running ${esc(sinceText(info.last))}. Until they’re back, send parent emails yourself with Email parents.`, `<div class="row">${again}</div>`);
     else {
-      const when = info.delay ? `About ${esc(plural(info.delay, 'minute'))} after each class ends` : 'When each class ends';
       top = `<p class="m-text small">${when}, TapRoll emails the parents of students you marked absent or tardy${from}.${reply} Excused tardies aren’t emailed.</p>`;
       if (info.why === 'trouble') top += status('warn', 'alert', `The last try hit a problem${info.error ? `: ${esc(info.error)}` : ''}. TapRoll tries again every few minutes. You can also send emails yourself.`);
     }
@@ -5799,6 +5824,21 @@ code.nw { white-space: nowrap; }
     return `<p class="lp-note am-note">${ic('mail')}<span>${esc(parts.join(' '))}</span></p>`;
   }
 
+  // In a class that hasn't ended: offer to turn automatic emails on, until the teacher chooses either way.
+  function autoMailOffer(p, date) {
+    if (!editable() || date !== todayStr() || phaseOf(p, date) === 'done') return '';
+    const info = mailInfo();
+    if (!info.offer || Date.now() - info.last > MAIL_STALE) return '';
+    const marks = marksOf(date, p.id);
+    const n = rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n).length;
+    if (!n) return '';
+    const who = n === 1 ? 'this student’s parent' : `the parents of these ${n} students`;
+    const when = info.delay ? `about ${plural(info.delay, 'minute')} after class ends` : 'when class ends';
+    return `<div class="lp-note am-note am-offer">${ic('mail')}<span>Want TapRoll to email ${esc(who)} for you, ${esc(when)}?</span>`
+      + '<span class="am-acts"><button type="button" class="btn sm primary" data-act="mail-auto" data-v="on">Turn on</button>'
+      + '<button type="button" class="btn sm ghost" data-act="mail-auto" data-v="off">No thanks</button></span></div>';
+  }
+
   /* ----- Setup guide for the site's owner ----- */
   function openMailGuide() {
     const info = mailInfo();
@@ -5816,7 +5856,7 @@ code.nw { white-space: nowrap; }
       ['RESEND_API_KEY', 'Secret', 'the key from step 3'],
       ['FIREBASE_SERVICE_ACCOUNT', 'Secret', 'everything in the key file from step 4'],
       ['MAIL_FROM', 'Text', `TapRoll &lt;noreply@${esc(domain)}&gt;`],
-      ['SCHOOLS', 'Text', 'the IDs of the schools to turn on, separated by commas. A school’s admin sees its ID in Settings › School']
+      ['SCHOOLS', 'Text, optional', 'leave it out so any teacher can turn automatic emails on for themselves. To have them on for everyone in a school, enter <code>*</code> and the school’s ID, like <code>*, sc12ab34cd56</code> (an admin sees the ID in Settings › School)']
     ];
     openModal(`${modalHead('Set up automatic parent emails', 'A few minutes after each class ends, TapRoll emails the parents of students marked absent or tardy, from your own address. Replies go to the teacher.')}<div class="m-body">`
       + `<div class="opstatus ${st.kind}">${ic(st.icon)}<p>${esc(st.text)}</p></div>`
@@ -5828,7 +5868,7 @@ code.nw { white-space: nowrap; }
       + setupStep('Create the Cloudflare Worker', `In Cloudflare, open <b>Workers &amp; Pages › Create › Start with Hello World</b>, name it taproll-mail, and click <b>Deploy</b>. Click <b>Edit code</b>, replace everything with <a href="${esc(WORKER_URL)}" target="_blank" rel="noopener">the TapRoll sender code</a>, and click <b>Deploy</b>.`)
       + setupStep('Add its settings', `In the Worker, open <b>Settings › Variables and Secrets</b> and add these, then deploy:<ul class="mg-vars">${vars.map(([k, t, v]) => `<li><code>${k}</code> <span class="pill e">${t}</span> ${v}</li>`).join('')}</ul>`)
       + setupStep('Run it every 10 minutes', 'Open <b>Settings › Trigger Events</b>, add a <b>Cron Trigger</b>, and enter <code class="nw">*/10 * * * *</code>. Within 10 minutes, Settings › Parent emails shows that automatic emails are on.')
-      + `</ol><p class="m-text small">Only schools listed in SCHOOLS get automatic emails, so strangers who sign up can’t send email from your address. Each teacher can turn them off. During school hours, each run reads about 5 Firestore documents per teacher, so for more than about 20 teachers, move Firebase to the pay-as-you-go Blaze plan. Resend’s free plan sends 100 emails a day.</p></div>`,
+      + `</ol><p class="m-text small">Teachers turn automatic emails on in Settings › Parent emails, or from the offer that appears in a class once someone is marked absent. Each teacher gets at most 100 automatic emails a day, and links are taken out of names in emails. To allow only certain schools, put just their IDs in SCHOOLS, without <code>*</code>. During school hours, each run reads about 5 Firestore documents per teacher who used TapRoll that day, so with more than about 20 such teachers, move Firebase to the pay-as-you-go Blaze plan. Resend’s free plan sends 100 emails a day.</p></div>`,
     { cls: 'wide', label: 'Set up automatic parent emails' });
   }
 

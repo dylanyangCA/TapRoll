@@ -4,9 +4,11 @@
 // student, class and day. Excused tardies aren't emailed. A tardy that a late pass covers is excused instead.
 // Emails come from MAIL_FROM through Resend, and replies go to the teacher.
 //
-// Only teachers in the schools listed in SCHOOLS get automatic emails (a teacher can still turn them off in
-// TapRoll › Settings › Parent emails). Listing schools keeps strangers who sign up from sending email
-// from your address.
+// Who gets automatic emails:
+//   - Any teacher who turns them on in TapRoll › Settings › Parent emails (or from the offer in a class).
+//   - Every teacher in a school listed in SCHOOLS, unless they turn them off.
+// Setting SCHOOLS to school IDs without * limits automatic emails to just those schools.
+// Each teacher gets at most DAILY_LIMIT automatic emails a day, and links are taken out of names in emails.
 //
 // Cloudflare dashboard › Workers & Pages › this Worker:
 //   Settings › Variables and Secrets
@@ -14,14 +16,15 @@
 //     FIREBASE_SERVICE_ACCOUNT  Secret. The whole JSON key of a Google service account that has the
 //                               Cloud Datastore User role in your TapRoll Firebase project.
 //     MAIL_FROM                 Text. Like: TapRoll <noreply@taprolleducation.com>
-//     SCHOOLS                   Text. School IDs that get automatic emails, separated by commas. A school
-//                               admin finds the ID in TapRoll › Settings › School. * means every school.
 //     Optional, Text:
+//     SCHOOLS          School IDs where automatic emails are on for every teacher by default, separated by
+//                      commas, plus * so other teachers can still turn them on for themselves (the default
+//                      when SCHOOLS is left out). A school admin finds the ID in TapRoll › Settings › School.
 //     DEFAULT_TZ       Time zone for teachers whose TapRoll hasn't reported one. Default America/Los_Angeles.
 //     DELAY_MINUTES    Minutes after class ends before emailing, so marks can be fixed first. Default 5.
 //     ACTIVE_HOURS     Hours of the day to work, in DEFAULT_TZ. Default 6-19 (6:00 AM to 7:59 PM).
 //     ACTIVE_DAYS      Days to work, 0 = Sunday. Default 1-5 (Monday to Friday).
-//     DAILY_LIMIT      Most automatic emails per teacher per day. Default 300.
+//     DAILY_LIMIT      Most automatic emails per teacher per day. Default 100.
 //   Settings › Trigger Events › Cron Triggers: */10 * * * *  (every 10 minutes)
 //
 // Every run records itself at site/mail in Firestore, which is how TapRoll knows automatic emails are on.
@@ -33,6 +36,7 @@ const RESEND = 'https://api.resend.com/emails/batch';
 const PASS_WINDOW = 30;   // a late pass covers a class that starts up to this many minutes after its period ends
 const MAX_AGE = 180;      // classes that ended longer ago than this (minutes) aren't emailed about
 const KEEP_LOGS = 30;     // days to keep the email log
+const ACTIVE_WINDOW = 26 * 3600000;   // teachers who used TapRoll this recently (lastActive) are checked
 const EMAIL_RE = /^[^\s@,;<>()"']+@[^\s@,;<>()"']+\.[^\s@,;<>()"'.]{2,}$/;
 const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
 let cachedToken = { key: '', token: '', exp: 0 };
@@ -49,16 +53,18 @@ export default {
 
 async function run(env, now = Date.now()) {
   const report = { lastRun: now, ok: true, teachers: 0, sent: 0, failed: 0, excused: 0, held: 0, cleaned: 0, error: '' };
-  const allow = String(env.SCHOOLS || '').split(/[\s,]+/).filter((x) => x === '*' || ID_RE.test(x));
-  const open = allow.includes('*');
+  // SCHOOLS: schools where automatic emails are on by default. * (or no SCHOOLS) lets any teacher turn them on.
+  const parts = String(env.SCHOOLS || '').split(/[\s,]+/).filter(Boolean);
+  const open = !parts.length || parts.includes('*');
+  const listed = parts.filter((x) => ID_RE.test(x));
   const cfg = {
     tz: validTz(env.DEFAULT_TZ) || 'America/Los_Angeles',
     delay: num(env.DELAY_MINUTES, 0, 60, 5),
-    limit: num(env.DAILY_LIMIT, 1, 5000, 300),
+    limit: num(env.DAILY_LIMIT, 1, 5000, 100),
     hours: range(env.ACTIVE_HOURS, 0, 23, [6, 19]),
     days: range(env.ACTIVE_DAYS, 0, 6, [1, 5])
   };
-  report.schools = open ? ['*'] : allow;
+  report.schools = open ? ['*', ...listed] : listed;
   report.delay = cfg.delay;
   report.from = String(env.MAIL_FROM || '');
   let fs = null;
@@ -76,24 +82,34 @@ async function run(env, now = Date.now()) {
       const old = await fs.query('', 'mailLog', { field: 'date', op: 'LESS_THAN', value: cutoff }, 300);
       if (old.length) { await fs.write(old.map((d) => ({ path: `mailLog/${d.id}`, remove: true }))); report.cleaned = old.length; }
     }
-    if (!open && !allow.length) return await finish(fs, report);
+    if (!open && !listed.length) return await finish(fs, report);
 
-    // 1. Teachers in the listed schools who haven't turned automatic emails off.
-    const found = [];
-    if (open) found.push(...await fs.query('', 'teachers', { field: 'schoolId', op: 'NOT_EQUAL', value: '' }));
-    else for (let i = 0; i < allow.length; i += 30) found.push(...await fs.query('', 'teachers', { field: 'schoolId', op: 'IN', value: allow.slice(i, i + 30) }));
-    let teachers = found.map((d) => ({ ...d.data, uid: d.id }))
-      .filter((t) => t.mailAuto !== false && ID_RE.test(t.uid) && ID_RE.test(String(t.ws || '')) && ID_RE.test(String(t.schoolId || '')));
+    // 1. Teachers who could get automatic emails today: everyone who used TapRoll in the last day (TapRoll
+    //    notes that as lastActive), and every teacher in a listed school.
+    const found = new Map();
+    const add = (rows) => rows.forEach((d) => found.set(d.id, { ...d.data, uid: d.id }));
+    if (open) add(await fs.query('', 'teachers', { field: 'lastActive', op: 'GREATER_THAN_OR_EQUAL', value: now - ACTIVE_WINDOW }));
+    for (let i = 0; i < listed.length; i += 30) add(await fs.query('', 'teachers', { field: 'schoolId', op: 'IN', value: listed.slice(i, i + 30) }));
+    let teachers = [...found.values()].filter((t) => t.mailAuto !== false && ID_RE.test(t.uid) && ID_RE.test(String(t.ws || '')));
 
-    // 2. Teachers write their own profile, so check that each one really is a member of that school.
-    const meta = await fs.getMany(teachers.flatMap((t) => [`schools/${t.schoolId}`, `schools/${t.schoolId}/members/${t.uid}`]));
-    teachers = teachers.filter((t) => meta.has(`schools/${t.schoolId}`) && meta.has(`schools/${t.schoolId}/members/${t.uid}`));
+    // 2. Teachers write their own profile, so a school only counts if they really are a member of it.
+    const inSchool = teachers.filter((t) => ID_RE.test(String(t.schoolId || '')));
+    const meta = await fs.getMany(inSchool.flatMap((t) => [`schools/${t.schoolId}`, `schools/${t.schoolId}/members/${t.uid}`]));
+    teachers = teachers.filter((t) => {
+      const school = ID_RE.test(String(t.schoolId || '')) ? meta.get(`schools/${t.schoolId}`) : null;
+      t.member = school ? meta.get(`schools/${t.schoolId}/members/${t.uid}`) || null : null;
+      t.school = t.member ? String(school.name || '') : String(t.school || '');
+      // On unless turned off in a listed school; anywhere else only when the teacher turned them on.
+      return t.member && listed.includes(t.schoolId) ? true : open && t.mailAuto === true;
+    });
     report.teachers = teachers.length;
     for (const t of teachers) {
-      const member = meta.get(`schools/${t.schoolId}/members/${t.uid}`);
-      t.who = clip(t.teacher || member.name || t.name || '', 80);
-      t.replyTo = EMAIL_RE.test(String(member.email || '')) ? String(member.email) : '';
-      t.schoolName = clip(meta.get(`schools/${t.schoolId}`).name || '', 80);
+      const m = t.member || {};
+      t.who = plain(t.teacher || m.name || t.name || '', 80);
+      // The rules check a school member's email against their account. A teacher outside a school wrote their own.
+      const mail = String(m.email || t.email || '');
+      t.replyTo = EMAIL_RE.test(mail) ? mail : '';
+      t.schoolName = plain(t.school, 80);
       t.tz = validTz(t.mailTz) || cfg.tz;
       t.local = localNow(t.tz, now);
       // Turned on today: only classes that end after that.
@@ -126,7 +142,8 @@ async function run(env, now = Date.now()) {
     const rosters = await fs.getMany(busy.map((t) => `${t.base}/meta/roster`));
     const schoolPasses = new Map();
     for (const w of work) {
-      if (w.mk.s !== 'T' || schoolPasses.has(w.t.schoolId)) continue;
+      // Only a school's members share its late passes.
+      if (w.mk.s !== 'T' || !w.t.member || schoolPasses.has(w.t.schoolId)) continue;
       const list = await fs.query(`schools/${w.t.schoolId}`, 'passes', { field: 'date', op: 'EQUAL', value: w.t.local.date });
       schoolPasses.set(w.t.schoolId, list.map((d) => ({ ...d.data, id: d.id })));
     }
@@ -145,7 +162,7 @@ async function run(env, now = Date.now()) {
       if (!Array.isArray(st.periods) || !st.periods.includes(w.pid)) continue;
       if (w.mk.s === 'T') {
         const own = Object.entries(obj(w.t.day.passes)).map(([id, x]) => ({ ...obj(x), id }));
-        const pass = [...own, ...(schoolPasses.get(w.t.schoolId) || [])]
+        const pass = [...own, ...((w.t.member && schoolPasses.get(w.t.schoolId)) || [])]
           .find((x) => isObj(x.from) && x.id !== w.mk.px && covers(x, { ...st, id: w.sid }, w.p, w.t.uid));
         if (pass) {
           marks.push({ path: w.t.dayPath, pid: w.pid, sid: w.sid, fields: { s: 'P', xt: 1, why: passWhy(pass), px: pass.id } });
@@ -229,8 +246,9 @@ async function finish(fs, report) {
 
 /* ----- The email ----- */
 function message(t, st, p, date, mk) {
-  const name = `${clip(st.first || '', 60)} ${clip(st.last || '', 60)}`.trim() || 'Your student';
-  const cls = `Period ${clip(p.num, 10)}${p.course ? ` (${clip(p.course, 60)})` : ''}`;
+  const name = `${plain(st.first, 60)} ${plain(st.last, 60)}`.trim() || 'Your student';
+  const course = plain(p.course, 60);
+  const cls = `Period ${clip(String(p.num == null ? '' : p.num).replace(/[^\w-]/g, ''), 10)}${course ? ` (${course})` : ''}`;
   const d = new Date(`${date}T12:00:00Z`);
   const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
   const short = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -412,6 +430,9 @@ async function sha256(text) {
 const isObj = (x) => !!x && typeof x === 'object' && !Array.isArray(x);
 const obj = (x) => (isObj(x) ? x : {});
 const clip = (s, n) => String(s == null ? '' : s).replace(/[\r\n\t]+/g, ' ').slice(0, n);
+// Names and courses in an email are typed by teachers, so take out anything an email app would turn into a link.
+const LINKY = /\S*(?::\/\/|www\.|@)\S*|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|edu|gov|io|co|info|biz|xyz|me|app|link|ly|gl|us|uk|ru|cn|tk|top|site|online|club|shop|live|click|ai|dev|page)\b\S*/gi;
+const plain = (s, n) => clip(String(s == null ? '' : s).replace(LINKY, ' ').replace(/\s{2,}/g, ' ').trim(), n);
 // Run errors are shown to teachers, so leave out email addresses.
 const safeError = (s) => clip(String(s == null ? '' : s).replace(/[^\s@<>()"',;]+@[^\s@<>()"',;]+/g, '(an address)'), 300);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
