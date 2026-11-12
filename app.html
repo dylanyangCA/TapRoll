@@ -3388,9 +3388,16 @@ code.nw { white-space: nowrap; }
       };
     }
     if (autoToday(date)) {
+      const plan = autoPlan(p, date);
+      if (plan.why === 'due') {
+        return {
+          btn: emailLink(st, p, date, mk, 'Email parent now'),
+          note: `<p class="m-text small sent-line">${ic('mail')}TapRoll emails ${esc(st.first ? `${st.first}’s` : 'their')} parent automatically at about ${esc(fmtClock(plan.at))}.</p>`
+        };
+      }
       return {
-        btn: emailLink(st, p, date, mk, 'Email parent now'),
-        note: `<p class="m-text small sent-line">${ic('mail')}TapRoll emails ${esc(st.first ? `${st.first}’s` : 'their')} parent automatically after class.</p>`
+        btn: emailLink(st, p, date, mk, 'Email parent'),
+        note: `<p class="m-text small warn-line">${ic('alert')}${plan.why === 'late' ? 'Not emailed yet' : 'Not emailed automatically'}: ${esc(notAutoWhy(plan))}</p>`
       };
     }
     return { btn: emailLink(st, p, date, mk, 'Email parent'), note: '' };
@@ -3429,7 +3436,7 @@ code.nw { white-space: nowrap; }
   function pendingEmails(p, date) {
     const marks = marksOf(date, p.id);
     // TapRoll sends these itself after class, except any it couldn't send.
-    if (autoToday(date)) return rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n && marks[st.id].nf).length;
+    if (autoClass(p, date)) return rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n && marks[st.id].nf).length;
     return rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n).length;
   }
   // Every absent or tardy student in the open period on the day being viewed, each with a button that opens a
@@ -3439,7 +3446,8 @@ code.nw { white-space: nowrap; }
     if (!p) return;
     const date = ui.date;
     const marks = marksOf(date, p.id);
-    const auto = autoToday(date);
+    const plan = autoToday(date) ? autoPlan(p, date) : null;
+    const auto = !!plan && plan.why === 'due';
     const rows = rosterOf(p.id).map((st) => ({ st, mk: marks[st.id] })).filter((r) => needsEmail(r.mk))
       .sort((a, b) => (a.mk.s === b.mk.s ? byName(a.st, b.st) : (a.mk.s === 'A' ? -1 : 1)));
     const day = date === todayStr() ? 'Today' : fmtDateShort(date);
@@ -3449,7 +3457,7 @@ code.nw { white-space: nowrap; }
           ? `<button type="button" class="btn sm" data-act="add-parent-email" data-id="${esc(st.id)}">${ic('plus')} Add parent email</button>`
           : (mk.n ? `<span class="sent">${ic('check')}${mk.na ? 'Emailed automatically' : 'Opened'} ${esc(fmtClock(mk.n))}</span>${emailLink(st, p, date, mk, 'Email again')}`
             : mk.nf ? `<span class="sent failed">${ic('alert')}Couldn’t send</span>${emailLink(st, p, date, mk)}`
-            : (auto ? `<span class="sent later">${ic('clock')}Sends after class</span>${emailLink(st, p, date, mk, 'Email now')}` : emailLink(st, p, date, mk)));
+            : (auto ? `<span class="sent later">${ic('clock')}Sends at about ${esc(fmtClock(plan.at))}</span>${emailLink(st, p, date, mk, 'Email now')}` : emailLink(st, p, date, mk)));
         return `<li class="pm-row"><span class="pill ${mk.s === 'A' ? 'a' : 't'}">${mk.s === 'A' ? 'Absent' : 'Tardy'}</span>`
           + `<span class="pm-who"><b>${esc(callName(st))}</b><span>${st.parents.length ? esc(st.parents.join(', ')) : 'No parent email yet'}${mk.s === 'T' ? ` · in at ${esc(fmtClock(mk.t))}` : ''}</span></span>`
           + `<span class="pm-act">${action}</span></li>`;
@@ -3457,7 +3465,10 @@ code.nw { white-space: nowrap; }
       : `<p class="m-text">No one in ${esc(periodLabel(p))} is absent or tardy ${day === 'Today' ? 'today' : `on ${esc(day)}`}. When someone is, they’re listed here with an email to their parent, already written.</p>`
         + `<p class="m-text small">To write to any student’s parent about something else, open the student and choose <b>Email parent</b>.</p>`;
     const html = `${modalHead('Email parents', `${periodLabel(p)} · ${day}`)}<div class="m-body">`
-      + `<p class="m-text small">${auto ? 'TapRoll emails these parents automatically a few minutes after class ends. To send one now from your own account, use its button.' : 'Each button opens an email to that student’s parent, already written. Read it over, then send it from your own account.'}</p>`
+      + `<p class="m-text small">${auto ? `TapRoll emails these parents automatically at about ${esc(fmtClock(plan.at))}. To send one now from your own account, use its button.` : 'Each button opens an email to that student’s parent, already written. Read it over, then send it from your own account.'}</p>`
+      // Automatic emails are on, but not for this class: say why, so it's clear these need sending by hand.
+      + (plan && !auto && rows.some((r) => r.st.parents.length && !r.mk.n && !r.mk.nf)
+        ? `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p>${plan.why === 'late' ? 'These haven’t been emailed yet' : 'These won’t be emailed automatically'}: ${esc(notAutoWhy(plan))}</p></div></div>` : '')
       + `<div class="field"><span>Open emails in</span>${viaSeg()}</div>${list}</div>`;
     const box = $('#modal-root .modal');
     if (refresh && ui.parentsOpen && box) { box.innerHTML = html; return; }
@@ -6436,6 +6447,71 @@ code.nw { white-space: nowrap; }
     return { ...base, auto: true, why: d.ok === false ? 'trouble' : 'on' };
   }
   const autoToday = (date) => date === todayStr() && mailInfo().auto;
+
+  /* When the sender emails about a class. It runs every 10 minutes, but only on its days and hours (Monday to
+     Friday, 6:00 AM to 7:59 PM in its time zone, unless the site's owner changed them), and only for classes that
+     ended at least `delay` minutes and at most 3 hours ago, on the class's own day, after the teacher turned
+     automatic emails on. Newer senders report their days, hours and time zone in site/mail. */
+  function mailSchedule() {
+    const d = Mail.data || {};
+    const pair = (v, lo, hi, dflt) => (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isInteger(x) && x >= lo && x <= hi) && v[0] <= v[1] ? v : dflt);
+    let tz = typeof d.tz === 'string' ? d.tz : '';
+    try { if (tz) new Intl.DateTimeFormat('en-US', { timeZone: tz }); } catch (e) { tz = ''; }
+    return { hours: pair(d.hours, 0, 23, [6, 19]), days: pair(d.days, 0, 6, [1, 5]), tz: tz || 'America/Los_Angeles', maxAge: Number(d.maxAge) > 0 ? Number(d.maxAge) : 180 };
+  }
+  const zoneFmt = {};
+  function zoned(tz, ms) {
+    const f = zoneFmt[tz] || (zoneFmt[tz] = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', hourCycle: 'h23' }));
+    const v = Object.fromEntries(f.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+    return { dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(v.weekday), hour: Number(v.hour) % 24 };
+  }
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  // "Monday to Friday, 6:00 AM to 8:00 PM" (plus the time zone when it isn't this device's).
+  function scheduleText(sch) {
+    const [d0, d1] = sch.days, [h0, h1] = sch.hours;
+    const days = d0 === 0 && d1 === 6 ? 'every day' : d0 === d1 ? `${DAY_NAMES[d0]}s` : `${DAY_NAMES[d0]} to ${DAY_NAMES[d1]}`;
+    const hours = h0 === 0 && h1 === 23 ? 'any time of day' : `${fmtHMap(minToHM(h0 * 60))} to ${h1 === 23 ? 'midnight' : fmtHMap(minToHM((h1 + 1) * 60))}`;
+    return `${days}, ${hours}${tzName() && tzName() !== sch.tz ? ` (${sch.tz.replace(/_/g, ' ')} time)` : ''}`;
+  }
+  /* Whether and when the sender emails about absences and tardies in a class on `date`: { why, at }.
+     why: due (it will, at about `at`), late (it should have by now), noend (the class has no end time), before
+     (automatic emails were turned on after the class ended), quiet (outside the sender's days and hours), missed
+     (the time to send has passed). */
+  function autoPlan(p, date) {
+    const end = toMin(p.end);
+    if (end == null) return { why: 'noend' };
+    const day0 = parseDate(date).getTime();
+    const since = Number(S.settings.mailSince) || 0;
+    if (since && day0 + end * 60000 <= since) return { why: 'before' };
+    const info = mailInfo();
+    const sch = mailSchedule();
+    const delay = Number(info.delay) >= 0 ? Number(info.delay) : 5;
+    const lastMin = Math.min(end + sch.maxAge, 24 * 60 - 1);
+    let at = 0;
+    for (let m = end + delay; m <= lastMin && !at; m += 5) {
+      const z = zoned(sch.tz, day0 + m * 60000);
+      if (z.dow >= sch.days[0] && z.dow <= sch.days[1] && z.hour >= sch.hours[0] && z.hour <= sch.hours[1]) at = day0 + m * 60000;
+    }
+    if (!at) return { why: 'quiet', sch };
+    const now = Date.now();
+    if (now > day0 + lastMin * 60000 + 10 * 60000) return { why: 'missed', at, sch };
+    // The sender has run since then and these still weren't emailed.
+    if (now > at + 20 * 60000 && Number(info.last) > at + 10 * 60000) return { why: 'late', at, sch };
+    return { why: 'due', at, sch };
+  }
+  // TapRoll will email about this class itself (so the teacher doesn't need to).
+  const autoClass = (p, date) => autoToday(date) && autoPlan(p, date).why === 'due';
+  // Why a class's absences and tardies won't be emailed automatically, as the end of a sentence.
+  function notAutoWhy(plan) {
+    switch (plan.why) {
+      case 'noend': return 'this class has no end time. Add one with the pencil next to its name.';
+      case 'before': return 'automatic emails were turned on after this class ended.';
+      case 'quiet': return `automatic emails go out ${scheduleText(plan.sch)}, and this class ends outside that.`;
+      case 'missed': return `automatic emails go out within ${Math.round(plan.sch.maxAge / 60)} hours after class, and that time has passed.`;
+      case 'late': return 'TapRoll should have emailed them by now. Check Settings › Parent emails.';
+      default: return '';
+    }
+  }
   // The teacher's own choice, whether or not the sender is running right now.
   const mailChosen = (info) => (info.listed ? S.settings.mailAuto !== false : S.settings.mailAuto === true);
   function setMailAuto(on) {
@@ -6476,7 +6552,9 @@ code.nw { white-space: nowrap; }
       case 'unknown':
         return `${manual}<p class="m-text small">TapRoll couldn’t check whether automatic emails are on. Check your connection.</p><div class="row">${again}</div>${via}`;
       case 'none':
-        return `${manual}<p class="m-text small">TapRoll can also email parents automatically after class, from the site’s own address. It isn’t set up on this TapRoll site yet.</p>${guide}${via}`;
+        return `${manual}<p class="m-text small">TapRoll can also email parents automatically after class, from the site’s own address. It isn’t set up on this TapRoll site yet.</p>`
+          + '<p class="m-text small">If you run this site and already set it up, the sender hasn’t reported in. It runs every 10 minutes once its Cron Trigger is added. If this still shows 15 minutes later, open the Worker in Cloudflare and look at its Logs for the error.</p>'
+          + guide + via;
       case 'school':
         return `${manual}<p class="m-text small">Automatic emails after class are for teachers in a school. When your school invites you, join it under School above.</p>${via}`;
       case 'approve': {
@@ -6491,11 +6569,14 @@ code.nw { white-space: nowrap; }
     const from = info.from ? ` from <b>${esc(info.from)}</b>` : '';
     const reply = Session.user && Session.user.email ? ` Replies go to ${esc(info.listed && School.me && School.me.email ? School.me.email : Session.user.email)}.` : '';
     const when = info.delay ? `About ${esc(plural(info.delay, 'minute'))} after each class ends` : 'When each class ends';
-    if (info.why === 'off' && info.offer) top = `<p class="m-text small">TapRoll can email parents for you. ${when}, it emails the parents of students you marked absent or tardy${from}.${reply} To turn it on, choose Automatically after class.</p>`;
+    const sch = mailSchedule();
+    const hrs = Math.round(sch.maxAge / 60);
+    const sched = `<p class="m-text small">Automatic emails go out ${esc(scheduleText(sch))}, within ${hrs} hour${hrs === 1 ? '' : 's'} after each class ends, for classes that end after you turn them on. A class needs an end time. Other times, use Email parents.</p>`;
+    if (info.why === 'off' && info.offer) top = `<p class="m-text small">TapRoll can email parents for you. ${when}, it emails the parents of students you marked absent or tardy${from}.${reply} To turn it on, choose Automatically after class.</p>${sched}`;
     else if (info.why === 'off') top = `<p class="m-text small">You send parent emails yourself. TapRoll writes each one and opens it in your email.</p>`;
-    else if (info.why === 'stalled') top = status('warn', 'alert', `Automatic emails stopped running ${esc(sinceText(info.last))}. Until they’re back, send parent emails yourself with Email parents.`, `<div class="row">${again}</div>`);
+    else if (info.why === 'stalled') top = status('warn', 'alert', `Automatic emails stopped running ${esc(sinceText(info.last))}. Until they’re back, send parent emails yourself with Email parents. If you run this site, check the Worker’s Cron Trigger and Logs in Cloudflare.`, `<div class="row">${again}</div>`);
     else {
-      top = `<p class="m-text small">${when}, TapRoll emails the parents of students you marked absent or tardy${from}.${reply} Excused tardies aren’t emailed.</p>`;
+      top = `<p class="m-text small">${when}, TapRoll emails the parents of students you marked absent or tardy${from}.${reply} Excused tardies aren’t emailed.</p>${sched}`;
       if (info.why === 'trouble') top += status('warn', 'alert', `The last try hit a problem${info.error ? `: ${esc(info.error)}` : ''}. TapRoll tries again every few minutes. You can also send emails yourself.`);
     }
     const tip = info.why === 'off' ? 'Add parent emails in each student’s details.' : 'Only students marked absent or tardy get an email, so before class ends, mark anyone who didn’t tap in. Add parent emails in each student’s details.';
@@ -6523,10 +6604,14 @@ code.nw { white-space: nowrap; }
     const noEmail = due.filter((st) => !marks[st.id].n && !st.parents.length).length;
     const ended = phaseOf(p, date) === 'done';
     const unmarked = ended ? roster.filter((st) => !marks[st.id]).length : 0;
-    const end = toMin(p.end);
+    const plan = autoPlan(p, date);
     const parts = [];
     if (done) parts.push(`Parents of ${plural(done, 'student')} were emailed automatically.`);
-    if (waiting) parts.push(`Parents of ${plural(waiting, done ? 'more student' : 'student', done ? 'more students' : 'students')} get an email automatically${end == null ? ' after class' : ` at about ${fmtHMap(minToHM(Math.min(end + info.delay, 1439)))}`}.`);
+    if (waiting) {
+      const who = `Parents of ${plural(waiting, done ? 'more student' : 'student', done ? 'more students' : 'students')}`;
+      if (plan.why === 'due') parts.push(`${who} get an email automatically at about ${fmtClock(plan.at)}.`);
+      else parts.push(`${who} ${plan.why === 'late' ? 'haven’t been emailed yet' : 'won’t be emailed automatically'}: ${notAutoWhy(plan)} Use Email parents to send ${waiting === 1 ? 'it' : 'them'} yourself.`);
+    }
     if (failed) parts.push(`TapRoll couldn’t email the parents of ${plural(failed, 'student')}. Check ${failed === 1 ? 'the address' : 'their addresses'}, then use Email parents.`);
     if (noEmail) parts.push(`${plural(noEmail, 'student')} ${noEmail === 1 ? 'has' : 'have'} no parent email.`);
     if (unmarked) parts.push(`${plural(unmarked, 'student')} ${unmarked === 1 ? 'isn’t' : 'aren’t'} marked, so ${unmarked === 1 ? 'their parent isn’t' : 'their parents aren’t'} emailed.`);
@@ -6540,6 +6625,8 @@ code.nw { white-space: nowrap; }
     if (!editable() || date !== todayStr() || phaseOf(p, date) === 'done') return '';
     const info = mailInfo();
     if (!info.offer || Date.now() - info.last > MAIL_STALE) return '';
+    // Only offer for a class TapRoll would actually email about (not one that ends after hours, say).
+    if (autoPlan(p, date).why !== 'due') return '';
     const marks = marksOf(date, p.id);
     const n = rosterOf(p.id).filter((st) => st.parents.length && needsEmail(marks[st.id]) && !marks[st.id].n).length;
     if (!n) return '';
