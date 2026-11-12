@@ -128,7 +128,7 @@ strong { color: var(--ink); }
 <header class="top"><div class="top-in"><a class="brand" href="./"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8l3.4 3.4 6-7.2"/><path d="M15.8 8.4a5 5 0 0 1 0 7.2"/><path d="M18.7 5.9a8.6 8.6 0 0 1 0 12.2"/></svg></span>TapRoll</a><a class="open" href="app.html">Open TapRoll</a></div></header>
 <main class="doc">
 <h1>Privacy Policy</h1>
-<p class="date">Effective October 28, 2026</p>
+<p class="date">Effective November 10, 2026</p>
 <p class="lead">TapRoll helps teachers take attendance with NFC tags. This policy explains what information TapRoll collects, how it’s used and the choices you have. It applies to TapRoll at taprolleducation.com.</p>
 
 <section class="summary" aria-labelledby="short">
@@ -137,7 +137,7 @@ strong { color: var(--ink); }
     <li>Teachers and school staff create TapRoll accounts. Students don’t have accounts.</li>
     <li>We collect only what TapRoll needs: your account details and the classes, students and attendance you add.</li>
     <li>If a teacher joins their school in TapRoll, the school’s admins and registrars can see that teacher’s classes and attendance and add students to them. Teachers can leave a school at any time.</li>
-    <li>If a school turns them on, TapRoll emails a parent after class when their student is marked absent or tardy. Otherwise teachers send those emails themselves.</li>
+    <li>If a teacher or their school turns them on, TapRoll emails a parent after class when their student is marked absent or tardy. Otherwise teachers send those emails themselves.</li>
     <li>We never sell personal information, never show ads and never use student information for anything except running TapRoll for your school.</li>
     <li>You can download your attendance, delete students and classes yourself, and ask us to delete your account.</li>
   </ul>
@@ -148,7 +148,7 @@ strong { color: var(--ink); }
 <h3>Your account</h3>
 <p>When you create an account, we collect your name, email address and password, plus your school’s name if you add it. Passwords are stored only in hashed form, which can’t be turned back into the password.</p>
 <p>If you sign in with Google, Google shares your name, email address and profile picture with TapRoll. We never receive your Google password, and TapRoll can’t see your email, files, contacts or anything else in your Google account.</p>
-<p>We also keep whether you’ve confirmed your email address. Joining a school or inviting people to one needs a confirmed address.</p>
+<p>We also keep whether you’ve confirmed your email address (joining a school or inviting people to one needs a confirmed address), your time zone, whether you turned automatic parent emails on or off, and when you last used TapRoll, so the service that sends automatic emails only checks accounts that are in use.</p>
 
 <h3>Schools</h3>
 <p>A school in TapRoll links its teachers so the school office can see attendance across classes. When someone sets up a school, we keep the school’s name and who set it up. For each member, we keep their name, email address and role: admin, registrar or teacher.</p>
@@ -213,7 +213,7 @@ strong { color: var(--ink); }
 
 <h3>Emails to parents and school invites</h3>
 <p>When you choose <strong>Email parent</strong>, TapRoll writes a short message about the absence or tardy and opens it in your email app, Gmail or Outlook. You read it over and send it from your own account.</p>
-<p>A school can also have TapRoll send these messages itself. Then, a few minutes after each class ends, TapRoll emails the parent of each student marked absent or tardy, from a TapRoll address, with replies going to the teacher. The email names the student, the class, the day and, for a tardy, the check-in time. Excused tardies aren’t emailed, and each teacher can turn automatic emails off in Settings. To make sure no parent gets the same email twice, TapRoll keeps a record of each one it sends (the teacher, class, student, date and the addresses it went to) for 30 days. TapRoll uses parent email addresses only for these messages.</p>
+<p>A teacher, or their school, can also have TapRoll send these messages itself. Then, a few minutes after each class ends, TapRoll emails the parent of each student marked absent or tardy, from a TapRoll address, with replies going to the teacher. The email names the student, the class, the day and, for a tardy, the check-in time. Excused tardies aren’t emailed, and each teacher can turn automatic emails on or off in Settings. To make sure no parent gets the same email twice, TapRoll keeps a record of each one it sends (the teacher, class, student, date and the addresses it went to) for 30 days. TapRoll uses parent email addresses only for these messages.</p>
 <p>School invites work the same way: TapRoll can write an email telling the person how to join, and it opens in the sender’s own email. TapRoll uses an invited person’s email address only so they can find and accept the invite.</p>
 
 <h3>Our promises about student information</h3>
@@ -239,7 +239,7 @@ strong { color: var(--ink); }
 </ul>
 
 <h2 id="security">Where information is stored and how it’s protected</h2>
-<p>Your account and classes are stored with Google Firebase on Google Cloud. Information is encrypted while it travels and while it’s stored. Each teacher’s classes are kept in a separate space that only that teacher’s account can open, along with the admins and registrars of a school the teacher has joined. Security rules enforce this on our database. For schools that use automatic parent emails, the service that sends them reads those teachers’ classes, rosters and attendance with its own restricted account, only to find who to email. Only the TapRoll team can access the database directly, when needed to run and support TapRoll.</p>
+<p>Your account and classes are stored with Google Firebase on Google Cloud. Information is encrypted while it travels and while it’s stored. Each teacher’s classes are kept in a separate space that only that teacher’s account can open, along with the admins and registrars of a school the teacher has joined. Security rules enforce this on our database. For teachers who use automatic parent emails, the service that sends them reads their classes, rosters and attendance with its own restricted account, only to find who to email. Only the TapRoll team can access the database directly, when needed to run and support TapRoll.</p>
 <p>The example classroom on the sign-in page uses made-up students and is saved only in your browser. Nothing in it is sent to TapRoll.</p>
 <p>No system is perfectly secure, so we can’t promise that information will never be accessed without permission. If we learn of a security breach that affects your information, we’ll notify affected users and schools as the law requires.</p>
 
