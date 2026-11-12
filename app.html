@@ -1387,7 +1387,7 @@ code.nw { white-space: nowrap; }
   const fmtDay = (s) => parseDate(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   function hueOf(str) { let h = 7; for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 360; }
-  const initials = (st) => (((st.first || '').charAt(0)) + ((st.last || '').charAt(0))).toUpperCase() || '?';
+  const initials = (st) => (((st.nick || st.first || '').charAt(0)) + ((st.last || '').charAt(0))).toUpperCase() || '?';
 
   /* ============================== Icons ============================== */
   const ICONS = {
@@ -1632,7 +1632,9 @@ code.nw { white-space: nowrap; }
       token: typeof s.token === 'string' && s.token ? s.token : null,
       uids: Array.isArray(s.uids) ? s.uids.map(String).filter(Boolean) : [],
       tagAt: Number(s.tagAt) || null,
-      parents: Array.isArray(s.parents) ? parseEmails(s.parents.join(' ')).ok : []
+      parents: Array.isArray(s.parents) ? parseEmails(s.parents.join(' ')).ok : [],
+      // nick: what the student goes by. Shown in class (roster, check-ins, kiosk); emails and exports use the full name.
+      nick: String(s.nick || '').replace(/["“”()]/g, '').trim().slice(0, 30)
     };
     // sk: the school key a school office gave this student. It is also their school tag code (see Schools).
     // Left out when there isn't one, so a teacher's own save never erases it.
@@ -1804,6 +1806,8 @@ code.nw { white-space: nowrap; }
         if (this.ws !== ws) return;
         S.students = cleanMap(snap.exists ? (snap.data() || {}).students : null, normStudent);
         this.loaded.roster = true; dataChanged();
+        // Students the school office put in your classes are shared in the school's tag lookup too.
+        scheduleTagPublish(5000);
       }, onErr));
       this.wsUnsubs.push(this.fs.collection(`${base}/days`).onSnapshot((qs) => {
         if (this.ws !== ws) return;
@@ -1879,14 +1883,14 @@ code.nw { white-space: nowrap; }
     ensureWs();
     const patch = {};
     for (const s of list) { const n = normStudent(s); S.students[n.id] = n; patch[n.id] = n; }
-    if (Object.keys(patch).length) Store.persist({ doc: 'roster', patch: { students: patch } });
+    if (Object.keys(patch).length) { Store.persist({ doc: 'roster', patch: { students: patch } }); scheduleTagPublish(); }
   }
   const upsertStudent = (s) => upsertStudents([s]);
   function removeStudents(ids) {
     ensureWs();
     const patch = {};
     for (const id of ids) { delete S.students[id]; patch[id] = null; }
-    if (ids.length) Store.persist({ doc: 'roster', patch: { students: patch } });
+    if (ids.length) { Store.persist({ doc: 'roster', patch: { students: patch } }); scheduleTagPublish(); }
   }
   function removePeriod(id) {
     delete S.periods[id];
@@ -1917,6 +1921,9 @@ code.nw { white-space: nowrap; }
   const periodList = () => Object.values(S.periods).sort((a, b) => (a.num - b.num) || ((toMin(a.start) || 0) - (toMin(b.start) || 0)) || a.course.localeCompare(b.course));
   const periodLabel = (p) => `Period ${p.num}`;
   const fullName = (st) => `${st.first} ${st.last}`.trim() || 'Unnamed student';
+  // The name a student goes by in class: their nickname (if they have one) and last name.
+  const callFirst = (st) => st.nick || st.first;
+  const callName = (st) => `${callFirst(st)} ${st.last}`.trim() || 'Unnamed student';
   const byName = (a, b) => a.last.localeCompare(b.last, undefined, { sensitivity: 'base' }) || a.first.localeCompare(b.first, undefined, { sensitivity: 'base' });
   const rosterOf = (pid) => Object.values(S.students).filter((s) => s.periods.includes(pid)).sort(byName);
   const marksOf = (date, pid) => (S.days[date] && S.days[date][pid]) || {};
@@ -2257,24 +2264,29 @@ code.nw { white-space: nowrap; }
     const report = (ev) => (viaLink ? linkResult(ev) : feedback(ev));
 
     if (!st) {
-      const ev = {
-        kind: 'unknown',
-        text: scan.token ? 'This tag isn’t in your classes' : 'Unknown tag',
-        sub: scan.token ? 'It may be set up for another class. Link it to a student to use it here too.' : 'Link it to a student to start using it.'
+      const unknown = () => {
+        const ev = {
+          kind: 'unknown',
+          text: scan.token ? 'This tag isn’t in your classes' : 'Unknown tag',
+          sub: scan.token ? 'It may be set up for another class. Link it to a student to use it here too.' : 'Link it to a student to start using it.'
+        };
+        if (editable()) {
+          ev.actions = [{ label: 'New student', run: () => openNewTagStudent(scan) }];
+          if (Object.keys(S.students).length) ev.actions.unshift({ label: 'Link to student', run: () => openAssign(scan) });
+        }
+        report(ev);
       };
-      if (editable()) {
-        ev.actions = [{ label: 'New student', run: () => openNewTagStudent(scan) }];
-        if (Object.keys(S.students).length) ev.actions.unshift({ label: 'Link to student', run: () => openAssign(scan) });
-      }
-      report(ev);
+      // In a school, the tag may belong to a student in another teacher's class: find their name.
+      if (editable() && canLookup()) { schoolTagLookup(scan).then((r) => (r.found ? reportSchoolTag(r.found, scan, report) : unknown())); return; }
+      unknown();
       return;
     }
     const target = resolveTarget(st);
-    if (!target.pid) { report({ kind: 'warn', text: fullName(st), sub: target.reason, sid: st.id }); return; }
+    if (!target.pid) { report({ kind: 'warn', text: callName(st), sub: target.reason, sid: st.id }); return; }
     const p = S.periods[target.pid];
     if (!st.periods.includes(p.id)) {
       const other = st.periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ');
-      const ev = { kind: 'warn', text: fullName(st), sub: `Not on the ${periodLabel(p)} roster${other ? ` · in ${other}` : ''}`, pid: p.id };
+      const ev = { kind: 'warn', text: callName(st), sub: `Not on the ${periodLabel(p)} roster${other ? ` · in ${other}` : ''}`, pid: p.id };
       // Already in another of this teacher's classes: one tap adds them here, with the same tag and parent emails.
       if (editable()) ev.actions = [{ label: `Add to ${periodLabel(p)}`, run: () => addToClassAndCheckIn(st.id, p.id, scan) }];
       report(ev);
@@ -2282,7 +2294,7 @@ code.nw { white-space: nowrap; }
     }
     const prev = marksOf(target.date, p.id)[st.id] || null;
     if (prev && (prev.s === 'P' || prev.s === 'T')) {
-      report({ kind: 'dup', text: fullName(st), sub: `Already checked in at ${fmtClock(prev.t)}`, pid: p.id, sid: st.id });
+      report({ kind: 'dup', text: callName(st), sub: `Already checked in at ${fmtClock(prev.t)}`, pid: p.id, sid: st.id });
       return;
     }
     if (!editable()) { report({ kind: 'warn', text: 'View only', sub: 'Your access to this portal doesn’t allow check-ins.' }); return; }
@@ -2293,7 +2305,7 @@ code.nw { white-space: nowrap; }
     if (pass) s = 'P';
     setMark(target.date, p.id, st.id, pass ? { s, t, m: scan.source, xt: 1, why: passWhy(pass), px: pass.id } : { s, t, m: scan.source });
     const ev = {
-      kind: s === 'T' ? 'tardy' : 'present', text: fullName(st),
+      kind: s === 'T' ? 'tardy' : 'present', text: callName(st),
       sub: `${scan.added ? 'Added to the roster · ' : ''}${pass ? `Excused tardy (${passWhy(pass)})` : STATUS[s]} · ${periodLabel(p)} · ${fmtClock(t)}`, pid: p.id, sid: st.id,
       actions: [{ key: 'undo', label: 'Undo', run: () => { setMark(target.date, p.id, st.id, prev); scheduleRender(); } }]
     };
@@ -2638,7 +2650,7 @@ code.nw { white-space: nowrap; }
     const watch = chronicList();
     const watchHtml = watch.length
       ? `<ul class="watch">${watch.slice(0, 7).map((w) => `<li><button data-act="open-student" data-id="${esc(w.st.id)}"><span class="av" style="--h:${hueOf(w.st.id)}">${esc(initials(w.st))}</span>`
-        + `<span class="wname"><b>${esc(fullName(w.st))}</b><span>${esc(w.st.periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', '))} · missed ${w.miss} of ${w.n}</span></span>`
+        + `<span class="wname"><b>${esc(callName(w.st))}</b><span>${esc(w.st.periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', '))} · missed ${w.miss} of ${w.n}</span></span>`
         + `<span class="rate">${Math.round(w.rate * 100)}%</span></button></li>`).join('')}</ul>`
       : `<p class="watch-empty">No one has missed 10% or more of recent sessions.</p>`;
     const trend = list.map((p) => {
@@ -2710,7 +2722,7 @@ code.nw { white-space: nowrap; }
       const recent = Object.entries(marks).filter(([sid, mk]) => S.students[sid] && (mk.s === 'P' || mk.s === 'T'))
         .sort((a, b) => b[1].t - a[1].t).slice(0, 5);
       const feed = recent.length
-        ? `<ol class="feed">${recent.map(([sid, mk]) => `<li><span class="dot ${mk.s === 'T' ? 'k-tardy' : 'k-present'}"></span><span class="fx"><b>${esc(fullName(S.students[sid]))}</b> · ${esc(markLabel(mk))}${mk.m !== 'manual' ? ` · ${esc(METHOD[mk.m] || mk.m)}` : ''}</span><time>${esc(fmtClock(mk.t))}</time></li>`).join('')}</ol>`
+        ? `<ol class="feed">${recent.map(([sid, mk]) => `<li><span class="dot ${mk.s === 'T' ? 'k-tardy' : 'k-present'}"></span><span class="fx"><b>${esc(callName(S.students[sid]))}</b> · ${esc(markLabel(mk))}${mk.m !== 'manual' ? ` · ${esc(METHOD[mk.m] || mk.m)}` : ''}</span><time>${esc(fmtClock(mk.t))}</time></li>`).join('')}</ol>`
         : '<p class="feed-empty">Check-ins appear here as students tap in.</p>';
       scan = `<section class="card scanpanel ${ui.scanning ? 'is-live' : ''}" aria-label="Check-in">`
         + `<div class="scan-main"><div class="scan-row">${btn}`
@@ -2730,7 +2742,7 @@ code.nw { white-space: nowrap; }
       const mk = marks[st.id];
       const s = mk ? mk.s : 'U';
       if (ui.filter !== 'all' && s !== ui.filter) return false;
-      return !q || fullName(st).toLowerCase().includes(q);
+      return !q || fullName(st).toLowerCase().includes(q) || callName(st).toLowerCase().includes(q);
     });
     const tools = `<div class="rtools"><label class="search">${ic('search')}<span class="sr-only">Search students</span>`
       + `<input class="input" id="roster-search" type="search" placeholder="Search ${roster.length} students" value="${esc(ui.search)}" autocomplete="off"></label>`
@@ -2757,10 +2769,10 @@ code.nw { white-space: nowrap; }
     const noTag = st.token || st.uids.length ? '' : ' · <span class="notag">no tag</span>';
     const can = editable();
     return `<article class="stu ${s ? 's-' + STATUS_CLS[s] : 's-u'}" data-tile="${esc(st.id)}">`
-      + `<button class="stu-main" data-act="open-student" data-id="${esc(st.id)}" aria-label="${esc(fullName(st))}: open details">`
+      + `<button class="stu-main" data-act="open-student" data-id="${esc(st.id)}" aria-label="${esc(callName(st))}: open details"${st.nick ? ` title="${esc(fullName(st))}"` : ''}>`
       + `<span class="av" style="--h:${hueOf(st.id)}">${esc(initials(st))}</span>`
-      + `<span class="stu-txt"><span class="stu-name">${esc(st.first)} <b>${esc(st.last)}</b></span><span class="stu-meta">${how}<span class="mt">${esc(meta)}${noTag}</span></span></span></button>`
-      + `<div class="marks" role="group" aria-label="Mark ${esc(fullName(st))}">${['P', 'T', 'A', 'E'].map((k) => `<button class="mk mk-${k} ${s === k ? 'on' : ''}" data-act="mark" data-sid="${esc(st.id)}" data-s="${k}" aria-pressed="${s === k}" title="${STATUS[k]}" ${can ? '' : 'disabled'}>${k}</button>`).join('')}</div></article>`;
+      + `<span class="stu-txt"><span class="stu-name">${esc(callFirst(st))} <b>${esc(st.last)}</b></span><span class="stu-meta">${how}<span class="mt">${esc(meta)}${noTag}</span></span></span></button>`
+      + `<div class="marks" role="group" aria-label="Mark ${esc(callName(st))}">${['P', 'T', 'A', 'E'].map((k) => `<button class="mk mk-${k} ${s === k ? 'on' : ''}" data-act="mark" data-sid="${esc(st.id)}" data-s="${k}" aria-pressed="${s === k}" title="${STATUS[k]}" ${can ? '' : 'disabled'}>${k}</button>`).join('')}</div></article>`;
   }
 
   function renderScanbar() {
@@ -2946,18 +2958,22 @@ code.nw { white-space: nowrap; }
   }
 
   // One student per line: "First Last", "Last, First" or spreadsheet columns. Any email addresses on the line are
-  // taken as parent emails, so "Maya Lopez, maya.mom@example.com" works too.
+  // taken as parent emails, so "Maya Lopez, maya.mom@example.com" works too. A nickname goes in quotes or
+  // parentheses: Maya "Mimi" Lopez, or Lopez, Maya (Mimi).
   function parseNames(text) {
     return String(text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((raw) => {
       // Names never contain @, so every word with one is a parent email (or a mistyped one, which is skipped).
       const found = parseEmails((raw.match(/[^\s,;<>()"']*@[^\s,;<>()"']*/g) || []).join(' '));
       const parents = found.ok, badEmails = found.bad.length;
-      const line = raw.replace(/<?[^\s,;<>()"']*@[^\s,;<>()"']*>?/g, ' ').replace(/[\t ]*[,;]+[\t ]*(?=[,;\t]|$)/g, '').replace(/[ ]{2,}/g, ' ').trim().replace(/^[,;\t\s]+|[,;\t\s]+$/g, '');
+      let nick = '';
+      const line = raw.replace(/<?[^\s,;<>()"']*@[^\s,;<>()"']*>?/g, ' ')
+        .replace(/\s*(?:["“”]([^"“”\t]{1,30})["“”]|\(([^()\t]{1,30})\))\s*/, (m, a, b) => { nick = (a || b || '').trim(); return ' '; })
+        .replace(/[\t ]*[,;]+[\t ]*(?=[,;\t]|$)/g, '').replace(/[ ]{2,}/g, ' ').trim().replace(/^[,;\t\s]+|[,;\t\s]+$/g, '');
       let first = '', last = '';
       if (line.includes('\t')) { const parts = line.split('\t').map((s) => s.trim()).filter(Boolean); first = parts[0] || ''; last = parts.slice(1).join(' '); }
       else if (line.includes(',')) { const i = line.indexOf(','); last = line.slice(0, i).trim(); first = line.slice(i + 1).trim(); }
       else { const parts = line.split(/\s+/); last = parts.length > 1 ? parts.pop() : ''; first = parts.join(' '); }
-      return { first: first.slice(0, 40), last: last.slice(0, 40), parents, badEmails };
+      return { first: first.slice(0, 40), last: last.slice(0, 40), nick: nick.replace(/["“”()]/g, '').slice(0, 30), parents, badEmails };
     }).filter((n) => n.first || n.last);
   }
   /* ----- Add students: typed names, and tags tapped while the window is open -----
@@ -2976,11 +2992,15 @@ code.nw { white-space: nowrap; }
   }
   const namesList = (sts, max) => listText(sts.map(fullName), max);
   const shortPeriods = (st) => st.periods.map((id) => S.periods[id]).filter(Boolean).sort((a, b) => a.num - b.num).map((p) => `P${p.num}`).join(', ');
+  // Students by name, under both their full name and their nickname with last name.
   function studentsByName() {
     const map = new Map();
-    for (const st of Object.values(S.students)) { const k = nameKey(st.first, st.last); if (!map.has(k)) map.set(k, []); map.get(k).push(st); }
+    const put = (k, st) => { if (!map.has(k)) map.set(k, []); if (!map.get(k).includes(st)) map.get(k).push(st); };
+    for (const st of Object.values(S.students)) { put(nameKey(st.first, st.last), st); if (st.nick) put(nameKey(st.nick, st.last), st); }
     return map;
   }
+  // The name on a tapped tag's row: typed in, or found in the school's tag lookup.
+  const tapName = (t) => (t.school ? { first: t.school.first, last: t.school.last, nick: t.school.nick || '', parents: [], badEmails: 0 } : parseNames(t.name)[0] || null);
   // Who a submit would add. reuse: typed names that match one student in your classes join that student.
   function planAdd(names, taps, periods, reuse) {
     const changes = new Map();
@@ -2992,7 +3012,8 @@ code.nw { white-space: nowrap; }
       const missing = periods.filter((pid) => !st.periods.includes(pid));
       const rec = { ...st, ...extra, periods: [...st.periods, ...missing] };
       rec.parents = extra.parents ? parseEmails([...st.parents, ...extra.parents].join(' ')).ok : st.parents;
-      if (missing.length || rec.token !== st.token || rec.uids !== st.uids || rec.parents.join() !== st.parents.join()) changes.set(st.id, rec);
+      if (!extra.nick) rec.nick = st.nick;
+      if (missing.length || rec.token !== st.token || rec.uids !== st.uids || rec.nick !== st.nick || rec.parents.join() !== st.parents.join()) changes.set(st.id, rec);
       (missing.length ? added : already).push(rec);
     };
     const taken = new Set();
@@ -3010,8 +3031,11 @@ code.nw { white-space: nowrap; }
         byTag++;
         continue;
       }
-      const n = parseNames(t.name)[0];
+      const n = tapName(t);
       if (!n) continue;
+      // A tag from another teacher's class at your school carries its school key, so its school tag code works here.
+      const sk = t.school && t.school.sk && (!t.token || t.token === t.school.sk) ? t.school.sk : null;
+      const token = t.token || sk;
       const k = nameKey(n.first, n.last);
       const same = reuse ? (studentsByName().get(k) || []).filter((s) => !taken.has(s.id)) : [];
       if (same.length === 1) {
@@ -3019,11 +3043,14 @@ code.nw { white-space: nowrap; }
         const st = cur(same[0].id);
         taken.add(st.id);
         const extra = { parents: n.parents, tagAt: Date.now() };
-        if (!st.token && t.token) extra.token = t.token;
+        if (n.nick && !st.nick) extra.nick = n.nick;
+        if (!st.token && token) extra.token = token;
+        if (sk && !st.sk) extra.sk = sk;
         if (t.code && !uidIn(st.uids, t.code)) extra.uids = [...st.uids, t.code];
         join(st, extra);
       } else {
-        const rec = { id: 's' + rid(9), first: n.first, last: n.last, periods, token: t.token || null, uids: t.code ? [t.code] : [], tagAt: Date.now(), parents: n.parents };
+        const rec = { id: 's' + rid(9), first: n.first, last: n.last, nick: n.nick, periods, token: token || null, uids: t.code ? [t.code] : [], tagAt: Date.now(), parents: n.parents };
+        if (sk) rec.sk = sk;
         fresh.push(rec); added.push(rec);
         taken.add(rec.id);
       }
@@ -3039,11 +3066,11 @@ code.nw { white-space: nowrap; }
       if (same.length === 1) {
         if (taken.has(same[0].id)) continue;
         taken.add(same[0].id);
-        join(cur(same[0].id), { parents: n.parents });
+        join(cur(same[0].id), n.nick ? { parents: n.parents, nick: n.nick } : { parents: n.parents });
         continue;
       }
       if (fresh.some((f) => nameKey(f.first, f.last) === k)) continue;
-      const rec = { id: 's' + rid(9), first: n.first, last: n.last, periods, token: null, uids: [], tagAt: null, parents: n.parents };
+      const rec = { id: 's' + rid(9), first: n.first, last: n.last, nick: n.nick, periods, token: null, uids: [], tagAt: null, parents: n.parents };
       fresh.push(rec); added.push(rec);
     }
     return { records: [...changes.values(), ...fresh], added, already, byTag };
@@ -3066,14 +3093,28 @@ code.nw { white-space: nowrap; }
       const st = t.sid ? S.students[t.sid] : null;
       if (t.sid && !st) return '';
       const x = `<button type="button" class="btn ghost icon sm" data-tap-x="${esc(t.key)}" aria-label="Remove from the list">${ic('x')}</button>`;
-      if (!st) {
-        return `<li class="tap-row" data-key="${esc(t.key)}"><span class="pill t">New tag</span>`
-          + `<label class="tap-name"><span class="sr-only">Name for this tag</span><input class="input" data-tap-name="${esc(t.key)}" maxlength="160" autocomplete="off" spellcheck="false" placeholder="Type their name" value="${esc(t.name)}"></label>${x}</li>`;
+      const inPeriods = (s) => periods.length && periods.every((pid) => s.periods.includes(pid));
+      if (!st && t.look === 'busy') {
+        return `<li class="tap-row" data-key="${esc(t.key)}"><span class="pill u">Checking</span>`
+          + `<span class="tap-who"><b>Looking up this tag…</b><span>Checking your school’s classes</span></span>${x}</li>`;
       }
-      const here = periods.length && periods.every((pid) => st.periods.includes(pid));
+      if (!st && t.school) {
+        // Found in another teacher's class at your school. If you already have someone by that name, it's them.
+        const same = AddTap.asNew ? [] : (studentsByName().get(nameKey(t.school.first, t.school.last)) || []);
+        const here = same.length === 1 && inPeriods(same[0]);
+        const legal = t.school.nick ? ` · ${t.school.first} ${t.school.last}` : '';
+        return `<li class="tap-row${here ? ' here' : ''}" data-key="${esc(t.key)}"><span class="pill ${here ? 'u' : 'p'}">${here ? 'Already in' : 'Adding'}</span>`
+          + `<span class="tap-who"><b>${esc(foundName(t.school))}</b><span>${esc(here ? `Already in ${periods.map((id) => periodLabel(S.periods[id])).join(', ')}` : foundFrom(t.school) + legal)}</span></span>${x}</li>`;
+      }
+      if (!st) {
+        const hint = t.look === 'none' ? 'Not in your school’s classes. Type their name' : 'Type their name';
+        return `<li class="tap-row" data-key="${esc(t.key)}"><span class="pill t">New tag</span>`
+          + `<label class="tap-name"><span class="sr-only">Name for this tag</span><input class="input" data-tap-name="${esc(t.key)}" maxlength="160" autocomplete="off" spellcheck="false" placeholder="${esc(hint)}" value="${esc(t.name)}"></label>${x}</li>`;
+      }
+      const here = inPeriods(st);
       const where = here ? `Already in ${periods.map((id) => periodLabel(S.periods[id])).join(', ')}` : `In ${shortPeriods(st) || 'no class'}${st.parents.length ? ' · parent email on file' : ''}`;
       return `<li class="tap-row${here ? ' here' : ''}" data-key="${esc(t.key)}"><span class="pill ${here ? 'u' : 'p'}">${here ? 'Already in' : 'Adding'}</span>`
-        + `<span class="tap-who"><b>${esc(fullName(st))}</b><span>${esc(where)}</span></span>${x}</li>`;
+        + `<span class="tap-who"><b>${esc(callName(st))}</b><span>${esc(where)}</span></span>${x}</li>`;
     }).join('');
   }
   // Redraws the parts of Add students that depend on the taps, the names and the periods, keeping the caret where it was.
@@ -3135,13 +3176,32 @@ code.nw { white-space: nowrap; }
       if (row) { row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash'); }
       return;
     }
-    const t = { key: 't' + rid(6), sid: st ? st.id : null, token, code, name: '' };
+    // Not in your classes: in a school, look for it in the other teachers' classes before asking for a name.
+    const t = { key: 't' + rid(6), sid: st ? st.id : null, token, code, name: '', look: !st && canLookup() ? 'busy' : '' };
     AddTap.list.push(t);
+    const listed = () => {
+      const row = document.querySelector(`#af-taps [data-key="${CSS.escape(t.key)}"]`);
+      if (row) row.scrollIntoView({ block: 'nearest' });
+    };
+    if (t.look === 'busy') {
+      addRefresh();
+      listed();
+      schoolTagLookup({ token, serial: scan.serial, uid: scan.uid }).then((r) => {
+        if (!AddTap.open || !AddTap.list.includes(t)) return;
+        t.look = r.found ? 'found' : 'none';
+        t.school = r.found || null;
+        beep(r.found ? 'present' : 'tardy'); buzz(r.found ? 'present' : 'tardy');
+        announce(r.found ? `${foundName(r.found)} listed` : 'New tag. Type their name.');
+        // Move to its name field, unless the teacher is typing another tag's name right now.
+        const act = document.activeElement;
+        addRefresh(r.found || (act && act.dataset && act.dataset.tapName) ? null : t.key);
+      });
+      return;
+    }
     beep(st ? 'present' : 'tardy'); buzz(st ? 'present' : 'tardy');
-    announce(st ? `${fullName(st)} listed` : 'New tag. Type their name.');
+    announce(st ? `${callName(st)} listed` : 'New tag. Type their name.');
     addRefresh(st ? null : t.key);
-    const row = document.querySelector(`#af-taps [data-key="${CSS.escape(t.key)}"]`);
-    if (row) row.scrollIntoView({ block: 'nearest' });
+    listed();
   }
   async function addTapListen() {
     if (!AddTap.open) return;
@@ -3161,10 +3221,12 @@ code.nw { white-space: nowrap; }
     const list = periodList();
     openModal(`${modalHead('Add students', 'Paste names from a spreadsheet or type one per line, or have students tap their tags.')}`
       + `<form id="add-form" class="m-body"><label class="field"><span>Names</span><textarea id="af-names" placeholder="Maya Lopez&#10;Nguyen, Kevin&#10;Jordan Brooks, jbrooks.parent@example.com"></textarea>`
-      + `<small>One student per line. “First Last” and “Last, First” both work. Add a parent’s email after a name to save it too.</small></label>`
+      + `<small>One student per line. “First Last” and “Last, First” both work. A nickname goes in quotes, like Maya “Mimi” Lopez. Add a parent’s email after a name to save it too.</small></label>`
       + `<div id="af-match"></div>`
       + `<section class="tapbox" aria-label="Add students by tapping their tags"><div class="tapbox-head">${ic('nfc')}<div><b>Or tap their tags</b>`
-      + `<span>Students in your other classes come with their tag and parent email. A tag from another teacher’s class asks for a name, then works here too.</span></div></div>`
+      + `<span>Students in your other classes come with their tag and parent email. ${canLookup()
+        ? 'Students in other teachers’ classes at your school are found by their tag, so you don’t type their names.'
+        : 'A tag from another teacher’s class asks for a name, then works here too.'}</span></div></div>`
       + `<div class="tapbox-src" id="af-src">${addTapSrc(pid)}</div><ul class="tap-list" id="af-taps" aria-live="polite" hidden></ul></section>`
       + `<div class="field"><span>Periods</span><div class="checks">${list.map((p) => `<label class="check"><input type="checkbox" name="af-p" value="${esc(p.id)}" ${p.id === pid ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
       + `<p class="m-text small" id="af-err" hidden></p>`
@@ -3193,7 +3255,7 @@ code.nw { white-space: nowrap; }
     form.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' || !(e.target.dataset && e.target.dataset.tapName)) return;
       e.preventDefault();
-      const next = AddTap.list.find((t) => !t.sid && !t.name.trim() && t.key !== e.target.dataset.tapName);
+      const next = AddTap.list.find((t) => !t.sid && !t.school && t.look !== 'busy' && !t.name.trim() && t.key !== e.target.dataset.tapName);
       if (next) { const f = form.querySelector(`[data-tap-name="${CSS.escape(next.key)}"]`); if (f) f.focus(); } else e.target.blur();
     });
     form.addEventListener('submit', (e) => {
@@ -3205,12 +3267,14 @@ code.nw { white-space: nowrap; }
       const taps = AddTap.list.filter((t) => !t.sid || S.students[t.sid]);
       if (!names.length && !taps.length) { fail('Type or paste at least one name, or have a student tap their tag.'); return; }
       if (!periods.length) { fail('Pick at least one period.'); return; }
-      const unnamed = taps.find((t) => !t.sid && !parseNames(t.name).length);
+      const checking = taps.filter((t) => t.look === 'busy').length;
+      if (checking) { fail(`Still looking up ${checking === 1 ? 'a tag' : `${checking} tags`} with your school. Try again in a moment.`); return; }
+      const unnamed = taps.find((t) => !t.sid && !tapName(t));
       if (unnamed) { fail('Type a name for each new tag, or remove it from the list.', `[data-tap-name="${CSS.escape(unnamed.key)}"]`); return; }
       const plan = planAdd(names, taps, periods, !AddTap.asNew);
       if (plan.records.length) upsertStudents(plan.records);
       closeModal();
-      const bad = names.reduce((sum, n) => sum + n.badEmails, 0) + taps.reduce((sum, t) => sum + (t.sid ? 0 : (parseNames(t.name)[0] || { badEmails: 0 }).badEmails), 0);
+      const bad = names.reduce((sum, n) => sum + n.badEmails, 0) + taps.reduce((sum, t) => sum + (t.sid ? 0 : (tapName(t) || { badEmails: 0 }).badEmails), 0);
       const where = periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ');
       const parts = [];
       if (bad) parts.push(`${bad} parent email${bad === 1 ? '' : 's'} couldn’t be read. Add ${bad === 1 ? 'it' : 'them'} in each student’s details.`);
@@ -3231,14 +3295,31 @@ code.nw { white-space: nowrap; }
     if (!st.periods.includes(pid)) upsertStudent({ ...st, periods: [...st.periods, pid] });
     handleScan({ ...scan, added: true });
   }
-  // A tag that isn't linked to anyone in your classes: make a new student with it.
-  function openNewTagStudent(scan) {
+  // A student from another teacher's class at your school tapped in here.
+  function reportSchoolTag(found, scan, report) {
+    const target = resolveTarget(null);
+    const p = target.pid ? S.periods[target.pid] : null;
+    const ev = { kind: 'warn', text: foundName(found), sub: `${foundFrom(found)} · ${p ? `not on the ${periodLabel(p)} roster` : 'not in your classes'}` };
+    ev.actions = [p ? { label: `Add to ${periodLabel(p)}`, run: () => addSchoolStudent(found, scan, p.id) } : { label: 'Add student', run: () => openNewTagStudent(scan, found) }];
+    report(ev);
+  }
+  // Adds them to the class with the name the school has (or links the tag to your student by that name), then checks them in.
+  function addSchoolStudent(found, scan, pid) {
+    if (!editable() || !S.periods[pid]) return;
+    const plan = planAdd([], [{ key: 'school', sid: null, token: scan.token || null, code: scan.uid || scan.serial || null, name: '', school: found }], [pid], true);
+    if (plan.records.length) upsertStudents(plan.records);
+    handleScan({ ...scan, added: true });
+  }
+  // A tag that isn't linked to anyone in your classes: make a new student with it. found: what the school's tag
+  // lookup has for it, to fill in the name.
+  function openNewTagStudent(scan, found) {
     if (!editable()) return;
     const target = resolveTarget(null);
     const pid = target.pid || (S.periods[ui.periodId] ? ui.periodId : null);
-    openModal(`${modalHead('New student with this tag', 'Type their name. From now on, this tag checks them in.')}`
-      + `<form id="nt-form" class="m-body"><label class="field"><span>Name</span><input id="nt-name" maxlength="160" autocomplete="off" spellcheck="false" placeholder="Maya Lopez">`
-      + `<small>“First Last” or “Last, First”. Add a parent’s email after a comma to save it too.</small></label>`
+    const filled = found ? `${found.first}${found.nick ? ` "${found.nick}"` : ''} ${found.last}`.trim() : '';
+    openModal(`${modalHead('New student with this tag', found ? `${foundFrom(found)}. From now on, this tag checks them in here too.` : 'Type their name. From now on, this tag checks them in.')}`
+      + `<form id="nt-form" class="m-body"><label class="field"><span>Name</span><input id="nt-name" maxlength="160" autocomplete="off" spellcheck="false" placeholder="Maya Lopez" value="${esc(filled)}">`
+      + `<small>“First Last” or “Last, First”. A nickname goes in quotes, like Maya “Mimi” Lopez. Add a parent’s email after a comma to save it too.</small></label>`
       + `<div class="field"><span>Periods</span><div class="checks">${periodList().map((p) => `<label class="check"><input type="checkbox" name="nt-p" value="${esc(p.id)}" ${p.id === pid ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
       + `<p class="m-text small" id="nt-err" hidden></p>`
       + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">Add student</button></div></form>`, { label: 'New student', focus: '#nt-name' });
@@ -3252,13 +3333,15 @@ code.nw { white-space: nowrap; }
       const code = scan.uid || scan.serial || null;
       // Linked to someone meanwhile (on another device): just check them in.
       if ((scan.token && findByToken(scan.token)) || (code && findByUid(code))) { closeModal(); handleScan(scan); return; }
-      const rec = { id: 's' + rid(9), first: n.first, last: n.last, periods, token: scan.token || null, uids: code ? [code] : [], tagAt: Date.now(), parents: n.parents };
+      const sk = found && found.sk && (!scan.token || scan.token === found.sk) ? found.sk : null;
+      const rec = { id: 's' + rid(9), first: n.first, last: n.last, nick: n.nick, periods, token: scan.token || sk, uids: code ? [code] : [], tagAt: Date.now(), parents: n.parents };
+      if (sk) rec.sk = sk;
       upsertStudent(rec);
       closeModal();
       const st = S.students[rec.id];
       const t = resolveTarget(st);
       if (t.pid && st.periods.includes(t.pid)) handleScan({ ...scan, added: true });
-      else toast({ kind: 'ok', text: `${fullName(st)} added`, sub: periods.map((id) => periodLabel(S.periods[id])).join(', ') });
+      else toast({ kind: 'ok', text: `${callName(st)} added`, sub: periods.map((id) => periodLabel(S.periods[id])).join(', ') });
       scheduleRender();
     });
   }
@@ -3368,7 +3451,7 @@ code.nw { white-space: nowrap; }
             : mk.nf ? `<span class="sent failed">${ic('alert')}Couldn’t send</span>${emailLink(st, p, date, mk)}`
             : (auto ? `<span class="sent later">${ic('clock')}Sends after class</span>${emailLink(st, p, date, mk, 'Email now')}` : emailLink(st, p, date, mk)));
         return `<li class="pm-row"><span class="pill ${mk.s === 'A' ? 'a' : 't'}">${mk.s === 'A' ? 'Absent' : 'Tardy'}</span>`
-          + `<span class="pm-who"><b>${esc(fullName(st))}</b><span>${st.parents.length ? esc(st.parents.join(', ')) : 'No parent email yet'}${mk.s === 'T' ? ` · in at ${esc(fmtClock(mk.t))}` : ''}</span></span>`
+          + `<span class="pm-who"><b>${esc(callName(st))}</b><span>${st.parents.length ? esc(st.parents.join(', ')) : 'No parent email yet'}${mk.s === 'T' ? ` · in at ${esc(fmtClock(mk.t))}` : ''}</span></span>`
           + `<span class="pm-act">${action}</span></li>`;
       }).join('')}</ul>`
       : `<p class="m-text">No one in ${esc(periodLabel(p))} is absent or tardy ${day === 'Today' ? 'today' : `on ${esc(day)}`}. When someone is, they’re listed here with an email to their parent, already written.</p>`
@@ -3489,7 +3572,7 @@ code.nw { white-space: nowrap; }
     ui.excuseFor = null;
     refreshStudent();
     scheduleRender();
-    toast({ kind: 'ok', text: 'Tardy excused', sub: `${fullName(st)} · ${periodLabel(S.periods[pid])}`, actions: [{ label: 'Undo', run: () => { setMark(date, pid, sid, mk); refreshStudent(); scheduleRender(); } }] });
+    toast({ kind: 'ok', text: 'Tardy excused', sub: `${callName(st)} · ${periodLabel(S.periods[pid])}`, actions: [{ label: 'Undo', run: () => { setMark(date, pid, sid, mk); refreshStudent(); scheduleRender(); } }] });
   }
   function unexcuseTardy(sid, date, pid) {
     const mk = marksOf(date, pid)[sid];
@@ -3523,7 +3606,7 @@ code.nw { white-space: nowrap; }
     }).join('');
     const follow = followUps(st);
     return `<div class="m-head dr-head"><span class="av" style="--h:${hueOf(st.id)}">${esc(initials(st))}</span>`
-      + `<div class="dr-title"><h2>${esc(fullName(st))}</h2><p>${esc(periods.map((p) => `P${p.num} ${p.course}`).join(' · ') || 'Not in any period')}</p></div>`
+      + `<div class="dr-title"><h2>${esc(fullName(st))}</h2><p>${st.nick ? `Goes by ${esc(st.nick)} · ` : ''}${esc(periods.map((p) => `P${p.num} ${p.course}`).join(' · ') || 'Not in any period')}</p></div>`
       + `<button class="btn ghost icon" data-act="close-modal" aria-label="Close">${ic('x')}</button></div>`
       + follow.map((e, i) => followSection(st, e, i === 0)).join('')
       + `<section class="dsec${follow.length ? '' : ' first'}"><h3>NFC tag</h3>`
@@ -3540,6 +3623,8 @@ code.nw { white-space: nowrap; }
       + `<section class="dsec"><h3>Last 15 class sessions</h3><div class="hist">${hist || '<p class="m-text small">Not in any period.</p>'}</div></section>`
       + `${can ? `<section class="dsec"><h3>Details</h3><form id="stu-form" class="m-body"><div class="grid2"><label class="field"><span>First name</span><input id="sf-first" maxlength="40" value="${esc(st.first)}"></label>`
         + `<label class="field"><span>Last name</span><input id="sf-last" maxlength="40" value="${esc(st.last)}"></label></div>`
+        + `<label class="field"><span>Nickname <em>optional</em></span><input id="sf-nick" maxlength="30" autocomplete="off" value="${esc(st.nick || '')}" placeholder="What they go by">`
+        + `<small>Shown on your roster and when ${esc(st.first || 'they')} ${st.first ? 'taps' : 'tap'} in. Emails and exports use the full name.</small></label>`
         + `<label class="field"><span>Parent or guardian email <em>optional</em></span><input id="sf-parents" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="300" placeholder="parent@example.com" value="${esc(st.parents.join(', '))}">`
         + `<small>TapRoll writes to this address when ${esc(st.first || 'this student')} is absent or tardy. Separate two addresses with a comma.</small></label>`
         + (st.parents.length ? `<div class="row">${mailAnchor(st.parents, parentNote(st), 'Email parent', `data-act="email-note" data-id="${esc(st.id)}"`)}<span class="m-text small">Write to them about anything, in your own email.</span></div>` : '')
@@ -3571,7 +3656,7 @@ code.nw { white-space: nowrap; }
       if (!first && !last) { err.textContent = 'Enter a name.'; err.hidden = false; return; }
       if (!periods.length) { err.textContent = 'Keep at least one period, or remove the student instead.'; err.hidden = false; return; }
       if (emails.bad.length) { err.textContent = `“${emails.bad[0]}” doesn’t look like an email address. Use one like parent@example.com.`; err.hidden = false; $('#sf-parents').focus(); return; }
-      upsertStudent({ ...st, first, last, periods, parents: emails.ok });
+      upsertStudent({ ...st, first, last, nick: $('#sf-nick').value, periods, parents: emails.ok });
       refreshStudent();
       toast({ kind: 'ok', text: 'Student saved', sub: `${first} ${last}`.trim() });
       scheduleRender();
@@ -3764,7 +3849,7 @@ code.nw { white-space: nowrap; }
     openModal(`${modalHead('Link this tag', `${pid ? `Choose a student in ${periodLabel(S.periods[pid])}.` : 'Choose a student.'} Students without a tag are listed first.`)}`
       + `<div class="m-body"><p class="m-text small">Tag ID <code>${esc(label)}</code></p>`
       + `<label class="search">${ic('search')}<span class="sr-only">Search students</span><input class="input" id="assign-q" type="search" placeholder="Search" autocomplete="off"></label>`
-      + `<ul class="pick" id="assign-list">${pool.map((s) => `<li data-name="${esc(fullName(s).toLowerCase())}"><button data-pick="${esc(s.id)}"><span class="av" style="--h:${hueOf(s.id)}">${esc(initials(s))}</span>${esc(fullName(s))}<small>${s.token || s.uids.length ? 'has a tag' : 'no tag'}</small></button></li>`).join('')}</ul></div>`, { label: 'Link tag' });
+      + `<ul class="pick" id="assign-list">${pool.map((s) => `<li data-name="${esc(`${fullName(s)} ${callName(s)}`.toLowerCase())}"><button data-pick="${esc(s.id)}"><span class="av" style="--h:${hueOf(s.id)}">${esc(initials(s))}</span>${esc(callName(s))}<small>${s.token || s.uids.length ? 'has a tag' : 'no tag'}</small></button></li>`).join('')}</ul></div>`, { label: 'Link tag' });
     $('#assign-q').addEventListener('input', (e) => {
       const q = e.target.value.trim().toLowerCase();
       document.querySelectorAll('#assign-list li').forEach((li) => { li.hidden = !!q && !li.dataset.name.includes(q); });
@@ -3785,7 +3870,7 @@ code.nw { white-space: nowrap; }
       changes.push({ ...st, token: scan.token || st.token, uids: code && !uidIn(st.uids, code) ? [...st.uids, code] : st.uids, tagAt: Date.now() });
       upsertStudents(changes);
       closeModal();
-      toast({ kind: 'ok', text: 'Tag linked', sub: fullName(st) });
+      toast({ kind: 'ok', text: 'Tag linked', sub: callName(st) });
       handleScan({ ...scan, source: scan.source === 'link' ? 'link' : (scan.source || 'usb') });
     });
   }
@@ -3823,7 +3908,7 @@ code.nw { white-space: nowrap; }
       const b = res.before;
       const st = (b && findByToken(b.token)) || findByUid(res.serial);
       const parts = [];
-      parts.push(st ? `<b>${esc(fullName(st))}</b> · ${esc(st.periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ') || 'no period')}` : '<b>Not linked to a student.</b>');
+      parts.push(st ? `<b>${esc(callName(st))}</b> · ${esc(st.periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ') || 'no period')}` : '<b>Not linked to a student.</b>');
       if (!b) parts.push('The tag was detected but its data couldn’t be read. It may be blank or an unsupported type.');
       else if (b.empty) parts.push('The tag is blank and ready to write.');
       else {
@@ -3843,7 +3928,7 @@ code.nw { white-space: nowrap; }
     toolStatus('wait', 'Tap any tag on the USB reader…', true);
     Wedge.capture = (code) => {
       const st = findByUid(code);
-      toolStatus('ok', `Reader works. It typed <code>${esc(code)}</code>.<br>${st ? `That tag belongs to <b>${esc(fullName(st))}</b>.` : 'That tag isn’t linked to a student yet. Link it from the student’s page.'}`);
+      toolStatus('ok', `Reader works. It typed <code>${esc(code)}</code>.<br>${st ? `That tag belongs to <b>${esc(callName(st))}</b>.` : 'That tag isn’t linked to a student yet. Link it from the student’s page.'}`);
     };
   }
 
@@ -4001,6 +4086,7 @@ code.nw { white-space: nowrap; }
     resetView();
     pickInitialView();
     dataChanged();
+    scheduleTagPublish();
   }
   function loadDemo() {
     if (Session.kind === 'demo') { resetDemoData(Math.floor(Math.random() * 1e9)); toast({ kind: 'ok', text: 'Example data reset', sub: 'A new set of made-up students.' }); return; }
@@ -4015,6 +4101,7 @@ code.nw { white-space: nowrap; }
     else { S = emptyState({ ...S.settings, sample: false }); Store.saveLocalSoon(); }
     resetView();
     dataChanged();
+    scheduleTagPublish();
     toast({ kind: 'ok', text: 'Starting fresh', sub: 'Add your first period to begin.' });
   }
 
@@ -4502,6 +4589,7 @@ code.nw { white-space: nowrap; }
       School.state = 'member';
       if (isStaffRole(School.role)) startStaff(); else stopStaff();
       watchPasses();
+      scheduleTagPublish(4000);
       if (School.inviteList.some((inv) => inv.sid === sid)) { setInvites(School.inviteList); if (!School.inviteList.length) School.inviteState = 'none'; }
       maybeOpenOffice();
       applySchoolLink();
@@ -4532,6 +4620,112 @@ code.nw { white-space: nowrap; }
       scheduleRender();
     }, (e) => console.warn('TapRoll: late passes from your school stopped updating', e));
   }
+  /* ----- School tag lookup -----
+     So a student from another teacher's class can be added by tapping their tag, without typing their name, each
+     teacher's TapRoll shares the tags of the students in their classes with their school:
+       schools/<sid>/tags/<key>   { first, last, nick, sk?, by, byName, at }
+     key: t-<tag code> for TapRoll tag codes and school keys; u-<hex> for a tag's serial number (the same key for
+     either byte order, plus one for its first 4 bytes, which some USB readers type); r-<code> for anything else.
+     Members can read an entry only by its key, never list them, so a teacher sees a student's name only by tapping
+     that student's tag. Entries hold no parent emails. What this teacher has shared is kept in
+     teachers/<uid>/tagpub/<sid> { keys: { <key>: <name fingerprint> }, at }, so only changes are written. */
+  const revHex = (h) => h.match(/../g).reverse().join('');
+  const canonHex = (h) => { const r = revHex(h); return r < h ? r : h; };
+  function uidKeys(code) {
+    const v = uidVariants(code);
+    const out = new Set();
+    for (const h of v.hex) {
+      out.add('u-' + canonHex(h));
+      if (h.length > 8) out.add('u-' + canonHex(h.slice(0, 8)));
+    }
+    if (!out.size && /^[A-Z0-9]{4,40}$/.test(v.raw)) out.add('r-' + v.raw);
+    return [...out];
+  }
+  const tokenKey = (t) => (typeof t === 'string' && /^[a-z0-9]{6,40}$/.test(t) ? 't-' + t : null);
+  function tagKeysOf(st) {
+    const keys = new Set([tokenKey(st.token), tokenKey(st.sk)].filter(Boolean));
+    for (const u of st.uids) uidKeys(u).forEach((k) => keys.add(k));
+    return [...keys];
+  }
+  const canLookup = () => School.kind === 'cloud' && School.state === 'member' && !!School.sid && !!Cloud.fs;
+  const TagPub = { timer: null, due: 0, busy: false, again: false, sid: '', saved: null, blocked: false };
+  function scheduleTagPublish(delay = 3000) {
+    if (!canLookup() || Store.mode !== 'fs' || TagPub.blocked) return;
+    const due = Date.now() + delay;
+    if (TagPub.timer && TagPub.due <= due) return;   // already coming up sooner
+    clearTimeout(TagPub.timer);
+    TagPub.due = due;
+    TagPub.timer = setTimeout(() => { TagPub.timer = null; publishTags(); }, delay);
+  }
+  async function publishTags() {
+    if (TagPub.busy) { TagPub.again = true; return; }
+    if (!canLookup() || Store.mode !== 'fs' || ui.readOnly || TagPub.blocked) return;
+    if (!Store.isLoaded()) { scheduleTagPublish(); return; }
+    TagPub.busy = true;
+    const sid = School.sid, uid = meUid(), fs = Cloud.fs;
+    const stateRef = fs.doc(`teachers/${uid}/tagpub/${sid}`);
+    try {
+      if (TagPub.sid !== `${uid}/${sid}` || !TagPub.saved) {
+        const snap = await stateRef.get();
+        TagPub.saved = snap.exists && isObj((snap.data() || {}).keys) ? { ...snap.data().keys } : {};
+        TagPub.sid = `${uid}/${sid}`;
+      }
+      const saved = TagPub.saved;
+      const byName = String(S.settings.teacher || (Session.user && Session.user.name) || '').trim().slice(0, 80);
+      const want = new Map();
+      // Made-up example students stay out of the school's lookup.
+      for (const st of S.settings.sample ? [] : Object.values(S.students)) {
+        if (!st.first && !st.last) continue;
+        const entry = { first: st.first.slice(0, 40), last: st.last.slice(0, 40), nick: (st.nick || '').slice(0, 30), by: uid, byName };
+        if (st.sk) entry.sk = st.sk;
+        for (const k of tagKeysOf(st)) if (!want.has(k)) want.set(k, entry);
+      }
+      const fp = (e) => [e.first, e.last, e.nick, e.sk || ''].join('|');
+      const writes = [...want].filter(([k, e]) => saved[k] !== fp(e));
+      for (let i = 0; i < writes.length; i += 400) {
+        if (School.sid !== sid) return;
+        const b = fs.batch();
+        const at = Date.now();
+        for (const [k, e] of writes.slice(i, i + 400)) b.set(fs.doc(`schools/${sid}/tags/${k}`), { ...e, at });
+        await b.commit();
+        for (const [k, e] of writes.slice(i, i + 400)) saved[k] = fp(e);
+      }
+      // Tags no longer in your classes. An entry another teacher has written since stays (they have the student too).
+      for (const k of Object.keys(saved)) {
+        if (want.has(k) || School.sid !== sid) continue;
+        try { await fs.doc(`schools/${sid}/tags/${k}`).delete(); } catch (e) { /* written by another teacher since */ }
+        delete saved[k];
+      }
+      if (writes.length || Object.keys(saved).length !== want.size) await stateRef.set({ keys: saved, at: Date.now() });
+    } catch (err) {
+      // Older Firestore rules don't have the tag lookup. Teachers can still type names; don't keep retrying.
+      if (String((err && err.code) || '').includes('permission-denied')) TagPub.blocked = true;
+      console.warn('TapRoll: couldn’t share tags with your school', err);
+    } finally {
+      TagPub.busy = false;
+      if (TagPub.again) { TagPub.again = false; scheduleTagPublish(); }
+    }
+  }
+  // Finds a tapped tag in the school's lookup. Resolves { found: { first, last, nick, sk, byName } | null, error }.
+  async function schoolTagLookup(scan) {
+    if (!canLookup()) return { found: null };
+    const keys = uniq([tokenKey(scan.token), ...(scan.serial ? uidKeys(scan.serial) : []), ...(scan.uid ? uidKeys(scan.uid) : [])].filter(Boolean));
+    if (!keys.length) return { found: null };
+    const sid = School.sid;
+    const one = (k) => Cloud.fs.doc(`schools/${sid}/tags/${k}`).get()
+      .then((snap) => (snap.exists ? { k, d: snap.data() || {} } : { k }), (err) => ({ k, err }));
+    const res = await Promise.race([Promise.all(keys.map(one)), new Promise((resolve) => setTimeout(() => resolve(null), 8000))]);
+    if (!res) return { found: null, error: 'timeout' };
+    // The tag's own code first, then its serial number.
+    const hit = res.find((r) => r.d && (r.d.first || r.d.last));
+    if (!hit) return { found: null, error: res.some((r) => r.err && String(r.err.code || '').includes('permission-denied')) ? 'denied' : (res.some((r) => r.err) ? 'error' : null) };
+    const d = hit.d;
+    const sk = typeof d.sk === 'string' && /^[a-z0-9]{6,40}$/.test(d.sk) ? d.sk : null;
+    return { found: { first: String(d.first || '').trim().slice(0, 40), last: String(d.last || '').trim().slice(0, 40), nick: String(d.nick || '').replace(/["“”()]/g, '').trim().slice(0, 30), sk, byName: String(d.byName || '').trim().slice(0, 80) } };
+  }
+  const foundName = (f) => `${f.nick || f.first} ${f.last}`.trim();
+  const foundFrom = (f) => (f.byName ? `From ${f.byName}’s class` : 'From another class at your school');
+
   // The teacher was removed from the school (or left on another device).
   function schoolLost() {
     const name = School.name;
@@ -6108,7 +6302,7 @@ code.nw { white-space: nowrap; }
     openModal(`${modalHead('Kept the class late?', `Send a late pass from ${periodLabel(p)}${p.course ? ` ${p.course}` : ''}. Tardies in each student’s next class today are excused.`)}`
       + `<form id="lp-form" class="m-body"><div class="lp-tools"><span class="m-text small">The reason shows as “${esc(passWhy({ byName: teacher, from: { num: p.num } }))}”.</span>`
       + `<button type="button" class="linkbtn" id="lp-all">Select all</button><button type="button" class="linkbtn" id="lp-none">Clear</button></div>`
-      + `<ul class="lp-list">${roster.map((st) => `<li><label class="check"><input type="checkbox" name="lp-s" value="${esc(st.id)}" ${here(st) ? 'checked' : ''}> ${esc(fullName(st))}<small>${esc(marks[st.id] ? markLabel(marks[st.id]) : 'Not marked')}</small></label></li>`).join('')}</ul>`
+      + `<ul class="lp-list">${roster.map((st) => `<li><label class="check"><input type="checkbox" name="lp-s" value="${esc(st.id)}" ${here(st) ? 'checked' : ''}> ${esc(callName(st))}<small>${esc(marks[st.id] ? markLabel(marks[st.id]) : 'Not marked')}</small></label></li>`).join('')}</ul>`
       + `<p class="m-text small">${scope} Students who were here are selected.</p>`
       + `<p class="m-text small err-text" id="lp-err" hidden></p>`
       + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary" id="lp-go">Send late pass</button></div></form>`, { label: 'Late pass' });
@@ -7272,6 +7466,23 @@ service cloud.firestore {
         && request.resource.data.students is list && request.resource.data.students.size() <= 80;
       allow delete: if isMember(sid) && resource.data.by == me();
     }
+    // Tag lookup: so a student from another teacher's class can be added by tapping
+    // their tag, each teacher's TapRoll shares the name behind each tag in their
+    // classes. Members can read an entry only by its key (the tag's code or serial
+    // number), never as a list, so a name shows only to someone who taps that tag.
+    match /schools/{sid}/tags/{key} {
+      allow get: if isMember(sid);
+      allow create, update: if isMember(sid) && key.size() <= 44
+        && request.resource.data.by == me()
+        && request.resource.data.keys().hasOnly(['first', 'last', 'nick', 'sk', 'by', 'byName', 'at'])
+        && request.resource.data.first is string && request.resource.data.first.size() <= 40
+        && request.resource.data.last is string && request.resource.data.last.size() <= 40
+        && request.resource.data.get('nick', '') is string && request.resource.data.get('nick', '').size() <= 30
+        && request.resource.data.get('sk', '') is string && request.resource.data.get('sk', '').size() <= 40
+        && request.resource.data.byName is string && request.resource.data.byName.size() <= 80
+        && request.resource.data.at is number;
+      allow delete: if isMember(sid) && (resource.data.by == me() || isStaff(sid));
+    }
     // Site status, like whether automatic parent emails are running. Only the
     // site's own email sender (with its service account) writes here.
     match /site/{doc} {
@@ -7300,7 +7511,7 @@ service cloud.firestore {
       + setupStep('Turn on sign-in', 'Open <b>Authentication</b>, click <b>Get started</b>, then enable <b>Email/Password</b> and <b>Google</b>.')
       + setupStep('Allow your site', `In Authentication, open <b>Settings › Authorized domains</b> and add <code>${esc(host)}</code>.`)
       + setupStep('Create the database', 'Open <b>Firestore Database</b>, click <b>Create database</b>, keep the defaults, and start in <b>production mode</b>.')
-      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before late passes and automatic parent emails, paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
+      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before November 12, 2026 (when schools started finding students by their tags), paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
       + setupStep('Fill in config.js', 'Copy the <code>const firebaseConfig = { … };</code> block from step 2 and paste it into <code>config.js</code> in place of everything there. Upload <code>config.js</code> to the same folder as <code>app.html</code>. You can find the block again later under <b>Project settings › General › Your apps</b>.')
       + setupStep('Reload TapRoll', 'GitHub can take a few minutes to update. Then the sign-in page shows <b>Continue with Google</b>, and classes sync across devices.')
       + `</ol><p class="m-text small">Accounts made on a device before the switch stay on that device. To move classes over, download a backup in Settings, sign in with your new account, and restore it.</p>`
