@@ -681,6 +681,18 @@ code {
 .k-last.dup span { color: var(--muted); }
 .k-foot { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 22px; font-size: 15px; color: var(--ink-2); }
 .k-foot b { font: 700 18px var(--mono); color: var(--ink); margin-right: 4px; }
+/* Kiosk window (app.html?kiosk): only the kiosk, with a clock and its own Full screen and Close */
+body.kiosk-win #app, body.kiosk-win #scanbar { display: none !important; }
+.k-title { min-width: 0; }
+.k-tools { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.k-clock { font: 600 20px var(--mono); color: var(--ink-2); margin-right: 6px; }
+.k-ring.idle { color: var(--muted); background: var(--surface); }
+.k-ring.idle::after { display: none; }
+.k-next { font-size: 18px; color: var(--ink-2); max-width: 40ch; text-wrap: balance; }
+.k-away { display: flex; align-items: flex-start; gap: 12px; align-self: center; max-width: 720px; padding: 14px 18px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); font-size: 16px; }
+.k-away .ic { width: 22px; height: 22px; color: var(--t); flex: none; margin-top: 1px; }
+.k-away p { margin: 0; color: var(--ink-2); }
+.k-away b { color: var(--ink); }
 
 /* ---------- Mobile scan dock ---------- */
 .scanbar { display: none; }
@@ -772,6 +784,9 @@ code {
   .cells { gap: 2px; }
   .cell { width: 14px; height: 20px; }
   .trow svg { width: 72px; }
+  /* A kiosk window is for a second screen; on a phone, Kiosk fills this screen instead. */
+  .wide-only { display: none !important; }
+  .k-tools .btn { padding-inline: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -1405,6 +1420,7 @@ code.nw { white-space: nowrap; }
     search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
     expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    popout: '<path d="M18.5 13.5v4.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2h4.5"/><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/>',
     spark: '<path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9z"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
     edit: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14 7l3 3"/>',
@@ -1595,8 +1611,15 @@ code.nw { white-space: nowrap; }
     // Email registrar: open, and its choices (one class or all of them, the address being typed, when it was opened)
     regOpen: false, reg: { scope: 'period', to: '', sentAt: 0 },
     // School office: the open tab, the student search, open drawers and dialogs
-    scTab: 'live', scSearch: '', scAll: false, scDrawer: null, scPanel: false, scInviteOpen: false, impOpen: false, hideInvite: false
+    scTab: 'live', scSearch: '', scAll: false, scDrawer: null, scPanel: false, scInviteOpen: false, impOpen: false, hideInvite: '',
+    // A kiosk window (app.html?kiosk) shows only the kiosk. kioskPin: the class it was opened from (app.html?kiosk=<id>),
+    // shown when no class is checking in by the bell schedule.
+    kioskWin: false, kioskPin: ''
   };
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.has('kiosk')) { ui.kioskWin = true; ui.kioskPin = String(q.get('kiosk') || '').slice(0, 40); }
+  } catch (e) { /* no query string here */ }
   // Who is signed in. kind: 'device' (account saved in this browser), 'cloud' (Firebase account) or 'demo' (example classroom).
   // office: signed up as a school admin or registrar (offer to set up or join a school once the app opens).
   const Session = { kind: null, user: null, office: false };
@@ -1698,6 +1721,12 @@ code.nw { white-space: nowrap; }
     fs: null, root: '', ws: null, unsubs: [], wsUnsubs: [], pendingWrites: 0,
     graceTimer: null, graceDone: false, lastSettings: null, profileWritten: false, onNewProfile: null,
     loaded: { settings: true, periods: true, roster: true, days: true },
+    // Device accounts and the example classroom keep everything in one saved copy, and another TapRoll window for
+    // the same account (a kiosk window, say) saves to it too. So each window keeps the changes it made since it last
+    // saved (localPending, the same patches a cloud account sends to Firestore). When the saved copy changed under it,
+    // it starts again from that copy and applies them again. lastRaw: the copy as this window last read or saved it.
+    // localReplaced: everything was replaced (Start fresh, example data), so this window's copy is saved as it is.
+    localPending: [], localReplaced: false, lastRaw: null,
 
     localWorks() { try { localStorage.setItem('taproll.probe', '1'); localStorage.removeItem('taproll.probe'); return true; } catch (e) { return false; } },
     readKey(key) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } },
@@ -1708,11 +1737,17 @@ code.nw { white-space: nowrap; }
       this.close();
       this.key = key;
       this.mode = this.localWorks() ? 'local' : 'memory';
-      const saved = this.mode === 'local' ? this.readKey(key) : null;
+      const raw = this.mode === 'local' ? this.readRaw(key) : null;
+      let saved = null;
+      try { saved = raw ? JSON.parse(raw) : null; } catch (e) { saved = null; }
+      this.lastRaw = raw;
       if (saved && isObj(saved) && isObj(saved.periods)) S = normalizeState(saved);
-      else { S = makeInitial ? makeInitial() : emptyState(); this.saveLocalSoon(); }
+      else { S = makeInitial ? makeInitial() : emptyState(); this.replacedLocal(); }
       this.setLoaded(true);
     },
+    readRaw(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
+    // S was replaced as a whole: save it as it is, over whatever another window saved.
+    replacedLocal() { this.localPending = []; this.localReplaced = true; this.saveLocalSoon(); },
     // Cloud accounts.
     openFirestore(fs, uid) {
       this.close();
@@ -1723,24 +1758,50 @@ code.nw { white-space: nowrap; }
       this.unsubs.push(fs.doc(this.root).onSnapshot((snap) => this.onSettings(snap), (e) => this.subFailed(e)));
     },
     close() {
-      this.flushLocal();
+      this.flushLocal(true);
       [...this.unsubs, ...this.wsUnsubs].forEach((u) => { try { u(); } catch (e) { /* already closed */ } });
       this.unsubs = []; this.wsUnsubs = [];
       clearTimeout(this.graceTimer); this.graceTimer = null;
       this.mode = 'none'; this.key = null; this.fs = null; this.root = ''; this.ws = null; this.pendingWrites = 0;
+      this.localPending = []; this.localReplaced = false; this.lastRaw = null;
       this.onNewProfile = null;
       S = emptyState();
       this.setLoaded(true);
     },
 
-    flushLocal() {
+    // quiet: closing or leaving the page, so there's nothing to show again.
+    flushLocal(quiet) {
       clearTimeout(this.timer); this.timer = null;
-      if (this.mode !== 'local' || !this.key) return;
-      try { localStorage.setItem(this.key, JSON.stringify(S)); }
+      if (this.mode !== 'local' || !this.key || (!this.localReplaced && !this.localPending.length)) return;
+      const rebased = !this.localReplaced && this.rebase(this.readRaw(this.key));
+      const raw = JSON.stringify(S);
+      try { localStorage.setItem(this.key, raw); this.lastRaw = raw; this.localPending = []; this.localReplaced = false; }
       catch (e) { toast({ kind: 'warn', text: 'Couldn’t save on this device', sub: 'Browser storage is full or blocked. Download a backup from Settings.' }); }
+      if (rebased && !quiet) dataChanged();
     },
     saveLocalSoon() { if (this.mode !== 'local') return; clearTimeout(this.timer); this.timer = setTimeout(() => this.flushLocal(), 200); },
-    persist(change) { if (this.mode === 'fs') this.write(this.pathOf(change), change.patch); else this.saveLocalSoon(); },
+    persist(change) {
+      if (this.mode === 'fs') { this.write(this.pathOf(change), change.patch); return; }
+      if (this.mode === 'local' && !this.localReplaced) this.localPending.push(clone(change));
+      this.saveLocalSoon();
+    },
+    // Another window saved this account's copy since this window last read or saved it: start from that copy, then
+    // apply this window's own unsaved changes again. Returns whether anything changed.
+    rebase(raw) {
+      if (raw == null || raw === this.lastRaw) return false;
+      let base = null;
+      try { base = JSON.parse(raw); } catch (e) { base = null; }
+      if (!isObj(base) || !isObj(base.periods)) return false;
+      S = normalizeState(base);
+      for (const ch of this.localPending) applyChange(ch);
+      this.lastRaw = raw;
+      return true;
+    },
+    // The browser says another window saved: take its changes now, so this window shows them too.
+    onStorage(e) {
+      if (this.mode !== 'local' || !this.key || e.key !== this.key || this.localReplaced) return;
+      if (this.rebase(e.newValue)) dataChanged();
+    },
     pathOf(c) {
       if (c.doc === 'settings') return this.root;
       const base = `${this.root}/ws/${this.ws}`;
@@ -1916,6 +1977,32 @@ code.nw { white-space: nowrap; }
     Store.persist({ doc: 'day', date, patch: { date, periods: { [pid]: patch } } });
   }
   const setMark = (date, pid, sid, mark) => setMarks(date, pid, [{ sid, mark }]);
+  // Applies a change made in this window (the patch a cloud account sends to Firestore) to a fresh copy of the
+  // saved classes. See Store.rebase.
+  function applyChange(ch) {
+    const pt = isObj(ch && ch.patch) ? ch.patch : {};
+    if (ch.doc === 'settings') { S.settings = { ...S.settings, ...pt }; return; }
+    if (ch.doc === 'periods' || ch.doc === 'roster') {
+      const [map, norm, into] = ch.doc === 'periods' ? [pt.periods, normPeriod, S.periods] : [pt.students, normStudent, S.students];
+      for (const [id, v] of Object.entries(isObj(map) ? map : {})) { if (isObj(v)) into[id] = norm(v); else delete into[id]; }
+      return;
+    }
+    if (ch.doc !== 'day' || !ch.date) return;
+    const date = ch.date;
+    for (const [pid, marks] of Object.entries(isObj(pt.periods) ? pt.periods : {})) {
+      const day = S.days[date] || (S.days[date] = {});
+      const per = day[pid] || (day[pid] = {});
+      for (const [sid, mk] of Object.entries(isObj(marks) ? marks : {})) { if (isObj(mk) && STATUS[mk.s]) per[sid] = normMark(mk); else delete per[sid]; }
+      if (!Object.keys(per).length) delete day[pid];
+      if (!Object.keys(day).length) delete S.days[date];
+    }
+    for (const [id, v] of Object.entries(isObj(pt.passes) ? pt.passes : {})) {
+      const ps = S.passes[date] || (S.passes[date] = {});
+      const p = isObj(v) ? cleanPasses({ [id]: v })[id] : null;
+      if (p) ps[id] = p; else delete ps[id];
+      if (!Object.keys(ps).length) delete S.passes[date];
+    }
+  }
 
   /* ============================== Queries ============================== */
   const periodList = () => Object.values(S.periods).sort((a, b) => (a.num - b.num) || ((toMin(a.start) || 0) - (toMin(b.start) || 0)) || a.course.localeCompare(b.course));
@@ -2205,7 +2292,8 @@ code.nw { white-space: nowrap; }
     emit(code) {
       if (this.capture) { const fn = this.capture; this.capture = null; fn(code.trim()); return; }
       if (this.collect) { primeAudio(); this.collect(code.trim()); return; }
-      if (modal.open) { toast({ kind: 'info', text: 'Scan ignored', sub: 'Close the open window to check students in.' }); return; }
+      // With a kiosk window open, students keep tapping in while the teacher works here, so a dialog doesn't stop them.
+      if (modal.open && !Peers.kioskOpen()) { toast({ kind: 'info', text: 'Scan ignored', sub: 'Close the open window to check students in.' }); return; }
       primeAudio();
       handleScan({ uid: code.trim(), source: 'usb' });
     }
@@ -2228,8 +2316,11 @@ code.nw { white-space: nowrap; }
     return mine.filter((p) => { const s = toMin(p.start); return s != null && now < s && s - now <= passOf(p); })
       .sort((a, b) => toMin(a.start) - toMin(b.start))[0] || null;
   }
-  function resolveTarget(st) {
+  // hint: the class a tap was meant for, when "Add to Period 2" added the student to it.
+  function resolveTarget(st, hint) {
     const today = todayStr();
+    if (hint && st && S.periods[hint] && st.periods.includes(hint)) return { pid: hint, date: today };
+    if (ui.kioskWin) kioskFollow();
     const open = ui.view === 'period' ? S.periods[ui.periodId] : null;
     if (open && ui.date !== today) return { reason: 'Switch to today to check students in.' };
     // The bell schedule decides first. So when period 1 ends at 8:00 and period 2's bell rings at 8:05, a tap at
@@ -2240,7 +2331,7 @@ code.nw { white-space: nowrap; }
     if (open) return { pid: open.id, date: today };
     const cur = currentPeriod();
     if (cur) return { pid: cur.id, date: today };
-    return { reason: 'No period is in session. Open a period to check students in.' };
+    return { reason: ui.kioskWin ? 'No class is checking in right now.' : 'No period is in session. Open a period to check students in.' };
   }
 
   function handleScan(scan) {
@@ -2261,7 +2352,8 @@ code.nw { white-space: nowrap; }
       st = S.students[st.id];
     }
     const viaLink = scan.source === 'link';
-    const report = (ev) => (viaLink ? linkResult(ev) : feedback(ev));
+    // recipe: what the teacher can do about it from another TapRoll window (see Peers).
+    const report = (ev, recipe) => { if (viaLink) linkResult(ev); else feedback(ev); Peers.relay(ev, recipe); };
 
     if (!st) {
       const unknown = () => {
@@ -2274,14 +2366,14 @@ code.nw { white-space: nowrap; }
           ev.actions = [{ label: 'New student', run: () => openNewTagStudent(scan) }];
           if (Object.keys(S.students).length) ev.actions.unshift({ label: 'Link to student', run: () => openAssign(scan) });
         }
-        report(ev);
+        report(ev, { do: 'unknown', scan: slimScan(scan) });
       };
       // In a school, the tag may belong to a student in another teacher's class: find their name.
       if (editable() && canLookup()) { schoolTagLookup(scan).then((r) => (r.found ? reportSchoolTag(r.found, scan, report) : unknown())); return; }
       unknown();
       return;
     }
-    const target = resolveTarget(st);
+    const target = resolveTarget(st, scan.pid);
     if (!target.pid) { report({ kind: 'warn', text: callName(st), sub: target.reason, sid: st.id }); return; }
     const p = S.periods[target.pid];
     if (!st.periods.includes(p.id)) {
@@ -2289,7 +2381,7 @@ code.nw { white-space: nowrap; }
       const ev = { kind: 'warn', text: callName(st), sub: `Not on the ${periodLabel(p)} roster${other ? ` · in ${other}` : ''}`, pid: p.id };
       // Already in another of this teacher's classes: one tap adds them here, with the same tag and parent emails.
       if (editable()) ev.actions = [{ label: `Add to ${periodLabel(p)}`, run: () => addToClassAndCheckIn(st.id, p.id, scan) }];
-      report(ev);
+      report(ev, { do: 'add', sid: st.id, pid: p.id, scan: slimScan(scan) });
       return;
     }
     const prev = marksOf(target.date, p.id)[st.id] || null;
@@ -2442,17 +2534,23 @@ code.nw { white-space: nowrap; }
     ui.ready = !!Session.kind && Store.isLoaded();
     if (ui.ready && !firstReadyDone) {
       firstReadyDone = true;
-      pickInitialView();
-      maybeOpenOffice();
-      setTimeout(() => {
-        applyPasses();
-        if (pendingTag) processPendingHash();
-        else if (Session.office && School.state === 'none' && !modal.open) { Session.office = false; openOfficeStart(); }
-        else if (pendingSchoolLink) applySchoolLink();
-        else maybeOfferImport();
-      }, 0);
+      if (ui.kioskWin) {
+        // A kiosk window shows only the kiosk: the bell schedule picks the class, and no offers or dialogs open.
+        setTimeout(() => applyPasses(), 0);
+      } else {
+        pickInitialView();
+        maybeOpenOffice();
+        setTimeout(() => {
+          applyPasses();
+          if (pendingTag) processPendingHash();
+          else if (Session.office && School.state === 'none' && !modal.open) { Session.office = false; openOfficeStart(); }
+          else if (pendingSchoolLink) applySchoolLink();
+          else maybeOfferImport();
+        }, 0);
+      }
     }
     if (ui.view === 'period' && ui.ready && !S.periods[ui.periodId]) { ui.view = 'overview'; ui.periodId = null; }
+    if (ui.ready && School.lostSid) clearLostSchool();
     scheduleRender();
   }
   function renderAll() {
@@ -2584,7 +2682,7 @@ code.nw { white-space: nowrap; }
     } else if (ui.syncError) {
       out += `<div class="banner warn">${ic('alert')}<p><b>Live sync stopped.</b> Check your connection, then reload the page.</p><button class="btn sm" data-act="reload">Reload</button></div>`;
     } else if (ui.readOnly) out += `<div class="banner warn">${ic('alert')}<p>You can view these classes, but changes aren’t being saved.</p></div>`;
-    if (School.invite && School.state !== 'member' && !ui.hideInvite) {
+    if (School.invite && School.state !== 'member' && ui.hideInvite !== inviteKey(School.invite)) {
       const inv = School.invite;
       const more = School.inviteList.length - 1;
       out += `<div class="banner">${ic('school')}<p><b>${esc(inv.school || 'Your school')} invited you to join as ${inv.role === 'admin' ? 'an admin' : `a ${esc(ROLE_LABEL[inv.role].toLowerCase())}`}${more > 0 ? `, and ${more === 1 ? 'another school has' : `${more} other schools have`} too` : ''}.</b> ${inv.role === 'teacher' ? 'The school office will see your classes and can add students to them.' : 'You’ll see attendance for every class.'}</p>`
@@ -2604,7 +2702,8 @@ code.nw { white-space: nowrap; }
     const today = todayStr();
     const list = periodList();
     const head = `<header class="vhead"><div class="vhead-text"><div class="eyebrow">${esc(fmtDateLong(today))}${S.settings.school ? ` · ${esc(S.settings.school)}` : ''}</div>`
-      + `<h1 class="vtitle">Today</h1></div><div class="vhead-actions">${editable() && list.length ? `<button class="btn sm" data-act="email-registrar" data-scope="day">${ic('mail')} Email registrar</button>` : ''}`
+      + `<h1 class="vtitle">Today</h1></div><div class="vhead-actions">${list.length ? `<button class="btn sm wide-only" data-act="kiosk-window">${ic('popout')} Kiosk window</button>` : ''}`
+      + `${editable() && list.length ? `<button class="btn sm" data-act="email-registrar" data-scope="day">${ic('mail')} Email registrar</button>` : ''}`
       + `${editable() ? `<button class="btn sm" data-act="add-period">${ic('plus')} Add period</button>` : ''}</div></header>`;
     if (!list.length) {
       const legacy = Session.kind !== 'demo' && readLegacy();
@@ -2719,6 +2818,7 @@ code.nw { white-space: nowrap; }
       const nfcLine = nfc.ok
         ? (ui.scanning ? '<b>Phone NFC:</b> scanning. Students tap the back of this phone.' : '<b>Phone NFC:</b> ready.')
         : `<b>Phone NFC:</b> ${esc(nfc.title)}.${nfc.code === 'framed' && base ? ` <a href="${esc(base)}" target="_blank" rel="noopener">Open hosted site</a>` : ''} <button class="btn ghost sm" data-act="tag-tools">Why?</button>`;
+      const kioskOn = Peers.kioskOpen();
       const recent = Object.entries(marks).filter(([sid, mk]) => S.students[sid] && (mk.s === 'P' || mk.s === 'T'))
         .sort((a, b) => b[1].t - a[1].t).slice(0, 5);
       const feed = recent.length
@@ -2727,9 +2827,11 @@ code.nw { white-space: nowrap; }
       scan = `<section class="card scanpanel ${ui.scanning ? 'is-live' : ''}" aria-label="Check-in">`
         + `<div class="scan-main"><div class="scan-row">${btn}`
         + `<button class="btn" data-act="kiosk">${ic('expand')} Kiosk</button>`
+        + `<button class="btn wide-only" data-act="kiosk-window">${ic('popout')} ${kioskOn ? 'Show kiosk window' : 'Kiosk window'}</button>`
         + `<button class="btn ghost" data-act="simulate" ${editable() && roster.length ? '' : 'disabled'}>${ic('spark')} Simulate tap</button></div>`
         + `<div class="sources"><div class="src ${nfc.ok ? 'ok' : ''}">${ic('nfc')}<span>${nfcLine}</span></div>`
-        + `<div class="src ok">${ic('usb')}<span><b>USB reader:</b> ready. Taps follow your bell schedule.</span></div></div>`
+        + `<div class="src ok">${ic('usb')}<span><b>USB reader:</b> ready. Taps follow your bell schedule.</span></div>`
+        + `${kioskOn ? `<div class="src ok">${ic('popout')}<span><b>Kiosk window:</b> open. Taps show there while you use the rest of TapRoll.</span></div>` : ''}</div>`
         + `<div class="scan-row"><span class="rule">Taps count as</span>${tapSeg()}</div><div class="rule">${tardyRule(p)}</div></div>`
         + `<div class="scan-side"><div class="sect-head"><h2 class="sect">Recent check-ins</h2></div>${feed}</div></section>`;
     } else {
@@ -2790,19 +2892,56 @@ code.nw { white-space: nowrap; }
     bar.innerHTML = `${btn}<div class="sb-count"><b class="num">${c.P + c.T}/${c.total}</b>checked in</div>`;
   }
 
+  // The kiosk: full screen in this window (Kiosk), or in a window of its own (Kiosk window, app.html?kiosk) to put on
+  // a projector or second screen while the teacher keeps using TapRoll. A kiosk window follows the bell schedule.
+  let kioskHtml = '';
   function renderKiosk() {
     const k = $('#kiosk');
-    const p = S.periods[ui.periodId];
-    if (!ui.kiosk || !p) { k.hidden = true; k.innerHTML = ''; return; }
-    const c = countsOf(todayStr(), p.id);
+    if (!k) return;
+    if (ui.kioskWin && ui.ready) kioskFollow();
+    const p = ui.ready ? S.periods[ui.periodId] || null : null;
+    if (!ui.kiosk || ui.screen !== 'app' || (!p && !ui.kioskWin)) { k.hidden = true; k.innerHTML = ''; kioskHtml = ''; return; }
     const ev = ui.lastEvent && Date.now() - ui.lastEvent.ts < 6000 ? ui.lastEvent : null;
     const prompt = ui.scanning ? 'Tap your tag on the back of this phone' : 'Tap your tag on the reader';
+    const last = `<div class="k-last ${ev ? esc(ev.kind) : ''}">${ev ? `<b>${esc(ev.text)}</b><span>${esc(ev.sub || '')}</span>` : ''}</div>`;
+    let foot = '';
+    if (p) {
+      const c = countsOf(todayStr(), p.id);
+      foot = `<div class="k-foot"><span><b class="num">${c.P}</b>present</span><span><b class="num">${c.T}</b>tardy</span><span><b class="num">${c.U}</b>not yet</span></div>`;
+    }
+    let html;
+    if (!ui.kioskWin) {
+      html = `<div class="k-head"><div><b>${esc(periodLabel(p))} · ${esc(p.course)}</b><br><span>${tardyRule(p).replace(/<[^>]+>/g, '')}</span></div>`
+        + `<button class="btn" data-act="exit-kiosk">${ic('x')} Exit</button></div>`
+        + `<div class="k-center"><div class="k-ring">${ic('nfc')}</div><div class="k-prompt">${esc(prompt)}</div>${last}</div>${foot}`;
+    } else {
+      const nfc = NFC.status();
+      const tools = `<div class="k-tools"><span class="k-clock num">${esc(fmtClock(Date.now()))}</span>`
+        + `${ui.ready && nfc.ok && !ui.scanning && editable() ? `<button class="btn" data-act="toggle-scan">${ic('nfc')} Use this phone’s NFC</button>` : ''}`
+        + `${document.fullscreenEnabled ? `<button class="btn" data-act="kiosk-full">${ic('expand')} ${document.fullscreenElement ? 'Exit full screen' : 'Full screen'}</button>` : ''}`
+        + `<button class="btn" data-act="exit-kiosk">${ic('x')} Close</button></div>`;
+      let title = 'TapRoll kiosk', rule = '', center;
+      if (!ui.ready) center = `<div class="k-ring idle">${ic('nfc')}</div><div class="k-prompt">Opening the kiosk…</div>`;
+      else if (p) {
+        title = `${periodLabel(p)} · ${p.course}`;
+        rule = tardyRule(p).replace(/<[^>]+>/g, '');
+        center = `<div class="k-ring">${ic('nfc')}</div><div class="k-prompt">${esc(prompt)}</div>${last}`;
+      } else {
+        const next = nextCheckIn();
+        rule = esc(S.settings.school || '');
+        const when = next ? `Next: ${esc(periodLabel(next))} · ${esc(next.course)}. Check-in opens at ${esc(fmtHMap(minToHM(Math.max(0, toMin(next.start) - passOf(next)))))}.`
+          : periodList().length ? 'That’s all the classes for today.' : 'Add your classes in TapRoll to start.';
+        center = `<div class="k-ring idle">${ic('nfc')}</div><div class="k-prompt">No class is checking in right now</div><div class="k-next">${when}</div>${last}`;
+      }
+      const away = ui.ready && kioskAway && Date.now() - kioskAway >= 1500
+        ? `<div class="k-away" role="alert">${ic('alert')}<p><b>Taps won’t register right now.</b> A USB reader types into the window that was clicked last, and that isn’t TapRoll. Click anywhere on this window, or on your other TapRoll window.</p></div>`
+        : '';
+      html = `<div class="k-head"><div class="k-title"><b>${esc(title)}</b>${rule ? `<br><span>${rule}</span>` : ''}</div>${tools}</div>`
+        + `<div class="k-center">${center}</div>${foot}${away}`;
+    }
     k.hidden = false;
-    k.innerHTML = `<div class="k-head"><div><b>${esc(periodLabel(p))} · ${esc(p.course)}</b><br><span>${tardyRule(p).replace(/<[^>]+>/g, '')}</span></div>`
-      + `<button class="btn" data-act="exit-kiosk">${ic('x')} Exit</button></div>`
-      + `<div class="k-center"><div class="k-ring">${ic('nfc')}</div><div class="k-prompt">${esc(prompt)}</div>`
-      + `<div class="k-last ${ev ? esc(ev.kind) : ''}">${ev ? `<b>${esc(ev.text)}</b><span>${esc(ev.sub || '')}</span>` : ''}</div></div>`
-      + `<div class="k-foot"><span><b class="num">${c.P}</b>present</span><span><b class="num">${c.T}</b>tardy</span><span><b class="num">${c.U}</b>not yet</span></div>`;
+    // Only when something changed, so the ring's animation doesn't restart every few seconds.
+    if (html !== kioskHtml) { k.innerHTML = html; kioskHtml = html; }
   }
   function enterKiosk() {
     if (!S.periods[ui.periodId] || ui.date !== todayStr()) return;
@@ -2819,11 +2958,200 @@ code.nw { white-space: nowrap; }
     requestWakeLock();
   }
   function exitKiosk() {
+    if (ui.kioskWin) { closeKioskWindow(); return; }
     ui.kiosk = false;
     renderKiosk();
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { /* optional */ }
     if (!ui.scanning) releaseWakeLock();
     scheduleRender();
+  }
+
+  /* ----- Kiosk window ----- */
+  // Check-in has opened for a class that hasn't started yet.
+  const checkInOpen = (p) => { const s = toMin(p.start), n = nowMin(); return s != null && n < s && s - n <= passOf(p); };
+  // The class a kiosk window shows: the one taps just went to; else the next class once its check-in opens (if the
+  // class in session ends soon); else the class in session; else the class it was opened from, until that one ends.
+  function kioskClass() {
+    const list = periodList();
+    const ev = ui.lastEvent;
+    const recent = ev && ev.pid && Date.now() - ev.ts < 120000 ? S.periods[ev.pid] : null;
+    if (recent && (phaseOf(recent) === 'now' || checkInOpen(recent))) return recent;
+    const next = list.filter(checkInOpen).sort((a, b) => toMin(a.start) - toMin(b.start))[0] || null;
+    const live = list.filter((p) => phaseOf(p) === 'now').sort((a, b) => toMin(b.start) - toMin(a.start))[0] || null;
+    if (next && (!live || toMin(live.end) - nowMin() <= Math.min(passOf(next), 15))) return next;
+    if (live) return live;
+    const pin = S.periods[ui.kioskPin];
+    return pin && phaseOf(pin) !== 'done' ? pin : null;
+  }
+  // A kiosk window's open class is the one it shows, so taps outside the bell schedule go there (see resolveTarget).
+  function kioskFollow() {
+    if (!ui.kioskWin || !ui.ready) return;
+    const p = kioskClass();
+    ui.date = todayStr();
+    if (p) { ui.view = 'period'; ui.periodId = p.id; } else { ui.view = 'overview'; ui.periodId = null; }
+  }
+  // The next class whose check-in hasn't opened yet today.
+  function nextCheckIn() {
+    const now = nowMin();
+    return periodList().filter((p) => { const s = toMin(p.start); return s != null && s - passOf(p) > now; })
+      .sort((a, b) => toMin(a.start) - toMin(b.start))[0] || null;
+  }
+  // Opened from a class in the teacher's window (Kiosk window there): show that class when none is checking in.
+  function kioskPin(pid) {
+    if (!S.periods[pid] || ui.kioskPin === pid) return;
+    ui.kioskPin = pid;
+    try { history.replaceState(null, '', `${location.pathname}?kiosk=${encodeURIComponent(pid)}`); } catch (e) { /* not allowed here */ }
+    renderKiosk();
+  }
+  // Close: a window TapRoll opened closes. One opened some other way (a bookmark, an installed app) goes to TapRoll.
+  function closeKioskWindow() {
+    Peers.leave();   // now, since a message sent while the window closes can be lost
+    try { window.close(); } catch (e) { /* not allowed */ }
+    setTimeout(() => { if (!window.closed) location.replace(location.pathname); }, 250);
+  }
+  function kioskFullscreen() {
+    try {
+      const r = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+      if (r && typeof r.catch === 'function') r.catch(() => {});
+    } catch (e) { /* not allowed here */ }
+  }
+  // A USB reader types into the window that was clicked last. When that isn't a TapRoll window, the kiosk says so.
+  let kioskAway = 0;
+  function kioskFocusCheck() {
+    if (!ui.kioskWin) return;
+    const ok = ui.scanning || ui.screen !== 'app' || document.hasFocus() || Peers.focusedElsewhere();
+    if (ok) { if (kioskAway) { kioskAway = 0; renderKiosk(); } return; }
+    if (!kioskAway) { kioskAway = Date.now(); setTimeout(kioskFocusCheck, 1600); return; }
+    renderKiosk();
+  }
+  let kioskRef = null;
+  // Opens the kiosk in a window of its own, or brings back the one that's open.
+  function openKioskWindow(pid) {
+    primeAudio();
+    const url = `${location.pathname}?kiosk${pid ? `=${encodeURIComponent(pid)}` : ''}`;
+    let w = kioskRef && !kioskRef.closed ? kioskRef : null;
+    if (!w) {
+      try { w = window.open('', 'taproll-kiosk', 'popup,width=1024,height=720'); } catch (e) { w = null; }
+      if (!w) { toast({ kind: 'warn', text: 'Your browser blocked the kiosk window', sub: 'Allow pop-ups for this site, then choose Kiosk window again.' }); return; }
+      let fresh = false;
+      try { fresh = w.location.href === 'about:blank' || !/[?&]kiosk\b/.test(w.location.search); } catch (e) { fresh = false; }
+      if (fresh) w.location.replace(url);
+      kioskRef = w;
+    }
+    if (pid) Peers.post({ type: 'kiosk-pin', pid });
+    try { w.focus(); } catch (e) { /* the browser decides */ }
+  }
+
+  /* ============================== Other TapRoll windows ==============================
+     A kiosk window is a second copy of TapRoll for the same account. The windows talk over a BroadcastChannel: every
+     few seconds each says whether it has the keyboard (a USB reader types into the window clicked last) and whether
+     it's a kiosk, and each tells the others what a tap did. So the kiosk shows taps the teacher's window took, and the
+     teacher's window can link a tag tapped at the kiosk. The classes themselves sync through the saved copy (device
+     accounts, see Store.rebase) or Firestore (cloud accounts). */
+  const Peers = {
+    // gone: this window is closing or being left, so it stops saying it's here (closing fires blur and the like).
+    ch: null, id: rid(10), others: {}, gone: false,
+    init() {
+      if (typeof window.BroadcastChannel !== 'function') return;
+      try { this.ch = new BroadcastChannel('taproll.windows'); } catch (e) { this.ch = null; return; }
+      this.ch.onmessage = (e) => this.receive(e.data);
+      const ping = () => this.ping();
+      window.addEventListener('focus', ping);
+      window.addEventListener('blur', ping);
+      document.addEventListener('visibilitychange', ping);
+      window.addEventListener('pagehide', () => this.leave());
+      window.addEventListener('pageshow', (e) => { if (e.persisted) { this.gone = false; this.ping(); } });
+      setInterval(ping, 3000);
+      ping();
+    },
+    acct() { return Session.kind && Session.user ? `${Session.kind}:${Session.user.id || ''}` : ''; },
+    post(msg) {
+      if (!this.ch) return;
+      try { this.ch.postMessage({ ...msg, from: this.id, acct: this.acct() }); } catch (e) { /* closed */ }
+    },
+    leave() { if (!this.gone) this.post({ type: 'bye' }); this.gone = true; },
+    ping() {
+      if (this.gone) return;
+      this.post({ type: 'here', focused: document.hasFocus(), kiosk: ui.kioskWin });
+      // A window that closed without saying so (or was put to sleep) stops counting after a few seconds.
+      const n = Object.keys(this.others).length;
+      if (this.live().length !== n) peersChanged();
+      else if (ui.kioskWin) kioskFocusCheck();
+    },
+    receive(m) {
+      if (!isObj(m) || typeof m.from !== 'string' || m.from === this.id) return;
+      const had = this.others[m.from];
+      // Another account (or the sign-in screen) doesn't count.
+      if (m.type === 'bye' || !m.acct || m.acct !== this.acct()) { if (had) { delete this.others[m.from]; peersChanged(); } return; }
+      if (m.type === 'here') {
+        this.others[m.from] = { focused: !!m.focused, kiosk: !!m.kiosk, at: Date.now() };
+        if (!had) this.ping();   // a window just opened: answer, so it knows about this one right away
+        if (!had || had.focused !== !!m.focused || had.kiosk !== !!m.kiosk) peersChanged();
+        return;
+      }
+      if (had) had.at = Date.now();
+      if (m.type === 'event') peerEvent(m);
+      else if (m.type === 'kiosk-pin' && ui.kioskWin && typeof m.pid === 'string') kioskPin(m.pid);
+    },
+    live() {
+      const now = Date.now();
+      for (const [k, o] of Object.entries(this.others)) if (now - o.at > 8000) delete this.others[k];
+      return Object.values(this.others);
+    },
+    kioskOpen() { return ui.kioskWin || this.live().some((o) => o.kiosk); },
+    focusedElsewhere() { return this.live().some((o) => o.focused); },
+    // What a tap did. recipe: what the teacher can do about it from another window (see peerActions).
+    relay(ev, recipe) {
+      this.post({ type: 'event', kiosk: ui.kioskWin, recipe: recipe || null,
+        ev: { kind: ev.kind, text: ev.text, sub: ev.sub || '', pid: ev.pid || null, sid: ev.sid || null } });
+    }
+  };
+  const slimScan = (s) => ({ token: s.token || null, serial: s.serial || null, uid: s.uid || null, source: s.source || 'usb' });
+  function peersChanged() {
+    if (ui.kioskWin) kioskFocusCheck();
+    else if (ui.screen === 'app' && ui.view === 'period') scheduleRender();   // a class says when a kiosk window is open
+  }
+  // A tap another TapRoll window took.
+  function peerEvent(m) {
+    const e = isObj(m.ev) ? m.ev : null;
+    if (!e || !ui.ready || !TOAST_ICON[e.kind]) return;
+    const ev = { kind: e.kind, text: String(e.text || '').slice(0, 200), sub: String(e.sub || '').slice(0, 300),
+      pid: typeof e.pid === 'string' ? e.pid : null, sid: typeof e.sid === 'string' ? e.sid : null, ts: Date.now() };
+    if (ui.kiosk) {
+      // The kiosk shows it like its own tap. The window that took it has already beeped.
+      ui.lastEvent = ev;
+      renderKiosk();
+      clearTimeout(kioskTimer); kioskTimer = setTimeout(renderKiosk, 6500);
+      return;
+    }
+    // Tapped at the kiosk, and it needs the teacher (a tag that isn't linked, a student not on the roster).
+    if (!m.kiosk) return;
+    const actions = peerActions(m.recipe);
+    if (actions.length) toast({ kind: ev.kind, text: ev.text, sub: `At the kiosk · ${ev.sub}`, actions });
+  }
+  function peerActions(r) {
+    if (!isObj(r) || !isObj(r.scan) || !editable()) return [];
+    const str = (v, n = 80) => (typeof v === 'string' && v ? v.slice(0, n) : null);
+    const scan = { token: str(r.scan.token), serial: str(r.scan.serial), uid: str(r.scan.uid), source: str(r.scan.source) || 'usb' };
+    const linked = (scan.token && findByToken(scan.token)) || (scan.serial && findByUid(scan.serial)) || (scan.uid && findByUid(scan.uid));
+    const p = typeof r.pid === 'string' ? S.periods[r.pid] || null : null;
+    if (r.do === 'unknown') {
+      if (linked) return [];   // linked in this window since
+      const acts = [{ label: 'New student', run: () => openNewTagStudent(scan) }];
+      if (Object.keys(S.students).length) acts.unshift({ label: 'Link to student', run: () => openAssign(scan) });
+      return acts;
+    }
+    if (r.do === 'add') {
+      const st = typeof r.sid === 'string' ? S.students[r.sid] : null;
+      return p && st && !st.periods.includes(p.id) ? [{ label: `Add to ${periodLabel(p)}`, run: () => addToClassAndCheckIn(st.id, p.id, scan) }] : [];
+    }
+    if (r.do === 'found' && isObj(r.found) && !linked) {
+      const f = r.found;
+      const found = { first: str(f.first, 40) || '', last: str(f.last, 40) || '', nick: str(f.nick, 30) || '', byName: str(f.byName) || '' };
+      if (str(f.sk, 40)) found.sk = str(f.sk, 40);
+      return [p ? { label: `Add to ${periodLabel(p)}`, run: () => addSchoolStudent(found, scan, p.id) } : { label: 'Add student', run: () => openNewTagStudent(scan, found) }];
+    }
+    return [];
   }
 
   /* ============================== Modals ============================== */
@@ -3293,7 +3621,7 @@ code.nw { white-space: nowrap; }
     const st = S.students[sid], p = S.periods[pid];
     if (!st || !p || !editable()) return;
     if (!st.periods.includes(pid)) upsertStudent({ ...st, periods: [...st.periods, pid] });
-    handleScan({ ...scan, added: true });
+    handleScan({ ...scan, added: true, pid });
   }
   // A student from another teacher's class at your school tapped in here.
   function reportSchoolTag(found, scan, report) {
@@ -3301,14 +3629,14 @@ code.nw { white-space: nowrap; }
     const p = target.pid ? S.periods[target.pid] : null;
     const ev = { kind: 'warn', text: foundName(found), sub: `${foundFrom(found)} · ${p ? `not on the ${periodLabel(p)} roster` : 'not in your classes'}` };
     ev.actions = [p ? { label: `Add to ${periodLabel(p)}`, run: () => addSchoolStudent(found, scan, p.id) } : { label: 'Add student', run: () => openNewTagStudent(scan, found) }];
-    report(ev);
+    report(ev, { do: 'found', found, pid: p ? p.id : null, scan: slimScan(scan) });
   }
   // Adds them to the class with the name the school has (or links the tag to your student by that name), then checks them in.
   function addSchoolStudent(found, scan, pid) {
     if (!editable() || !S.periods[pid]) return;
     const plan = planAdd([], [{ key: 'school', sid: null, token: scan.token || null, code: scan.uid || scan.serial || null, name: '', school: found }], [pid], true);
     if (plan.records.length) upsertStudents(plan.records);
-    handleScan({ ...scan, added: true });
+    handleScan({ ...scan, added: true, pid });
   }
   // A tag that isn't linked to anyone in your classes: make a new student with it. found: what the school's tag
   // lookup has for it, to fill in the name.
@@ -4091,8 +4419,8 @@ code.nw { white-space: nowrap; }
       setSettings({ ...keep, ws, sample });
       Store.purgeWs(old);
     } else {
-      S = { settings: { ...S.settings, ...keep, sample }, periods: state.periods, students: state.students, days: state.days };
-      Store.saveLocalSoon();
+      S = { settings: { ...S.settings, ...keep, sample }, periods: state.periods, students: state.students, days: state.days, passes: state.passes || {} };
+      Store.replacedLocal();
     }
     resetView();
     pickInitialView();
@@ -4109,7 +4437,7 @@ code.nw { white-space: nowrap; }
   function startFresh() {
     NFC.stopScan(true);
     if (Store.mode === 'fs') { const old = Store.ws, ws = 'ws-' + rid(6); Store.switchWs(ws, true); setSettings({ ws, sample: false }); Store.purgeWs(old); }
-    else { S = emptyState({ ...S.settings, sample: false }); Store.saveLocalSoon(); }
+    else { S = emptyState({ ...S.settings, sample: false }); Store.replacedLocal(); }
     resetView();
     dataChanged();
     scheduleTagPublish();
@@ -4183,6 +4511,8 @@ code.nw { white-space: nowrap; }
         setTimeout(() => { const f = $('#sf-parents'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus({ preventScroll: true }); } }, 80);
         break;
       case 'kiosk': enterKiosk(); break;
+      case 'kiosk-window': openKioskWindow(ui.view === 'period' ? ui.periodId : null); break;
+      case 'kiosk-full': kioskFullscreen(); break;
       case 'exit-kiosk': exitKiosk(); break;
       case 'simulate': simulateTap(); break;
       case 'add-period': openPeriodEditor(null); break;
@@ -4240,7 +4570,7 @@ code.nw { white-space: nowrap; }
       case 'mail-auto': setMailAuto(el.dataset.v === 'on'); break;
       case 'mail-guide': openMailGuide(); break;
       case 'mail-recheck': loadMail(true); mailChanged(); break;
-      case 'hide-invite': ui.hideInvite = true; scheduleRender(); break;
+      case 'hide-invite': ui.hideInvite = inviteKey(School.invite); scheduleRender(); break;
       default: if (act.startsWith('sc-')) schoolAct(act, el); break;
     }
   }
@@ -4286,6 +4616,22 @@ code.nw { white-space: nowrap; }
   }
 
   /* ============================== Start ============================== */
+  // Another TapRoll window in this browser saved something: this device's preferences, or this account's classes.
+  function onStorage(e) {
+    if (!e || !e.key) return;
+    if (e.key === PKEY) { loadPrefs(); if (ui.screen === 'app') scheduleRender(); return; }
+    Store.onStorage(e);
+    // A kiosk window follows the device account (or example classroom) the teacher signs out of or in to elsewhere.
+    // Cloud accounts follow on their own, through Firebase.
+    if (ui.kioskWin && (e.key === Device.KEY || e.key === SESSION_KEY)) {
+      const acct = Device.current(), demo = lsGet(SESSION_KEY) === 'demo';
+      let stale = false;
+      if (Session.kind === 'device') stale = !acct || acct.id !== (Session.user || {}).id;
+      else if (Session.kind === 'demo') stale = !demo;
+      else if (!Session.kind) stale = demo || (!Cloud.cfg && !!acct);
+      if (stale) location.reload();
+    }
+  }
   function init() {
     loadPrefs();
     document.addEventListener('click', onClick);
@@ -4293,7 +4639,8 @@ code.nw { white-space: nowrap; }
     document.addEventListener('submit', onAuthSubmit);
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (modal.open) closeModal(); else if (ui.kiosk) exitKiosk();
+      // A kiosk window closes only with its Close button, so leaving full screen doesn't close it too.
+      if (modal.open) closeModal(); else if (ui.kiosk && !ui.kioskWin) exitKiosk();
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') Store.flushLocal();
@@ -4306,6 +4653,15 @@ code.nw { white-space: nowrap; }
     });
     window.addEventListener('online', setSyncState);
     window.addEventListener('offline', setSyncState);
+    window.addEventListener('storage', onStorage);
+    document.addEventListener('fullscreenchange', () => { if (ui.kiosk) renderKiosk(); });
+    if (ui.kioskWin) {
+      document.body.classList.add('kiosk-win');
+      document.title = 'TapRoll kiosk';
+      // The clock, and the class as the bell schedule moves on.
+      setInterval(() => { if (ui.kiosk) renderKiosk(); }, 10000);
+    }
+    Peers.init();
     Wedge.init();
     captureHash();
     boot();
@@ -4516,8 +4872,8 @@ code.nw { white-space: nowrap; }
   const School = {
     kind: null, me: null,
     sid: '', name: '', owner: '', role: null, state: 'off', error: null,
-    invite: null, inviteList: [], inviteState: 'idle',
-    members: {}, invites: {}, membersLoaded: false,
+    invite: null, inviteList: [], inviteAll: [], inviteSub: null, inviteState: 'idle', lostSid: '', leaving: '',
+    members: {}, invites: {}, membersLoaded: false, gone: {},
     t: {}, date: todayStr(), passes: [], passSub: null,
     subs: [], staffSubs: [], tSubs: {}, watching: false, autoOpened: false, verifySent: false, busy: false
   };
@@ -4526,16 +4882,17 @@ code.nw { white-space: nowrap; }
   const meUid = () => (School.me ? School.me.uid : '');
 
   function schoolStop() {
-    School.subs.forEach(offSub); School.staffSubs.forEach(offSub); offSub(School.passSub);
+    School.subs.forEach(offSub); School.staffSubs.forEach(offSub); offSub(School.passSub); offSub(School.inviteSub);
     Object.keys(School.tSubs).forEach(unwatchTeacher);
     Object.assign(School, {
-      kind: null, me: null, sid: '', name: '', owner: '', role: null, state: 'off', error: null, invite: null, inviteList: [], inviteState: 'idle',
-      members: {}, invites: {}, membersLoaded: false, t: {}, date: todayStr(), passes: [], passSub: null, subs: [], staffSubs: [], tSubs: {},
+      kind: null, me: null, sid: '', name: '', owner: '', role: null, state: 'off', error: null, invite: null, inviteList: [], inviteAll: [], inviteSub: null, inviteState: 'idle', lostSid: '', leaving: '',
+      members: {}, invites: {}, membersLoaded: false, gone: {}, t: {}, date: todayStr(), passes: [], passSub: null, subs: [], staffSubs: [], tSubs: {},
       watching: false, autoOpened: false, verifySent: false, busy: false
     });
-    ui.scTab = 'live'; ui.scSearch = ''; ui.scAll = false; ui.scDrawer = null; ui.scPanel = false; ui.hideInvite = false;
+    ui.scTab = 'live'; ui.scSearch = ''; ui.scAll = false; ui.scDrawer = null; ui.scPanel = false; ui.hideInvite = '';
   }
   function schoolChanged() {
+    refreshInvites();
     scheduleRender();
     if (modal.open && ui.scDrawer) refreshScDrawer();
     if (modal.open && ui.scPanel) refreshSchoolPanel();
@@ -4552,27 +4909,36 @@ code.nw { white-space: nowrap; }
     School.state = 'none';
     checkInvite();
   }
-  // Invites are found by email address, from any school. Reading them needs a confirmed email, so an invite can't be
-  // picked up by someone who only typed that address.
-  async function checkInvite() {
+  // Invites are found by email address, from any school, and watched while TapRoll is open, so an invite sent now
+  // (say, to a teacher who was removed and invited again) shows up right away. Reading them needs a confirmed email,
+  // so an invite can't be picked up by someone who only typed that address.
+  function checkInvite() {
     if (School.kind !== 'cloud' || !School.me || !School.me.email || !Cloud.fs) return;
-    if (!School.me.verified) { setInvites([]); School.inviteState = 'unverified'; schoolChanged(); return; }
+    if (!School.me.verified) { offSub(School.inviteSub); School.inviteSub = null; School.inviteAll = []; School.inviteState = 'unverified'; schoolChanged(); return; }
+    if (School.inviteSub) return;
+    const email = School.me.email;
     School.inviteState = 'checking';
-    try {
-      const qs = await Cloud.fs.collection('invites').where('email', '==', School.me.email).get();
-      setInvites(qs.docs.map((d) => ({ ...(d.data() || {}), email: School.me.email })));
-      School.inviteState = School.inviteList.length ? 'found' : 'none';
-    } catch (e) {
-      setInvites([]);
+    let sub = null;
+    sub = Cloud.fs.collection('invites').where('email', '==', email).onSnapshot((qs) => {
+      if (School.inviteSub !== sub) return;
+      School.inviteAll = qs.docs.map((d) => ({ ...(d.data() || {}), email }));
+      School.inviteState = 'ready';
+      schoolChanged();
+    }, (e) => {
+      if (School.inviteSub !== sub) return;
+      School.inviteSub = null; School.inviteAll = [];
       School.inviteState = String((e && e.code) || '').includes('permission-denied') ? 'denied' : 'error';
-    }
-    schoolChanged();
+      schoolChanged();
+    });
+    School.inviteSub = sub;
   }
-  function setInvites(list) {
-    School.inviteList = list.filter((inv) => inv && inv.sid && ROLE_LABEL[inv.role] && !(School.state === 'member' && inv.sid === School.sid))
+  // The invites to show: all of them, except one from the school this person is in now.
+  function refreshInvites() {
+    School.inviteList = (School.inviteAll || []).filter((inv) => inv && inv.sid && ROLE_LABEL[inv.role] && !(School.state === 'member' && inv.sid === School.sid))
       .sort((a, b) => (b.at || 0) - (a.at || 0));
     School.invite = School.inviteList[0] || null;
   }
+  const inviteKey = (inv) => (inv ? `${inv.sid}:${inv.at || 0}` : '');
   const findInvite = (sid) => School.inviteList.find((inv) => inv.sid === sid) || null;
   // Called whenever the teacher's profile changes. schoolId says which school they've joined.
   function schoolSync() {
@@ -4598,10 +4964,11 @@ code.nw { white-space: nowrap; }
       const m = snap.data() || {};
       School.role = ROLE_LABEL[m.role] ? m.role : 'teacher';
       School.state = 'member';
-      if (isStaffRole(School.role)) startStaff(); else stopStaff();
+      if (School.lostSid === sid) School.lostSid = '';
+      // A kiosk window doesn't need every class in the school.
+      if (isStaffRole(School.role) && !ui.kioskWin) startStaff(); else stopStaff();
       watchPasses();
       scheduleTagPublish(4000);
-      if (School.inviteList.some((inv) => inv.sid === sid)) { setInvites(School.inviteList); if (!School.inviteList.length) School.inviteState = 'none'; }
       maybeOpenOffice();
       applySchoolLink();
       schoolChanged();
@@ -4661,7 +5028,7 @@ code.nw { white-space: nowrap; }
   const canLookup = () => School.kind === 'cloud' && School.state === 'member' && !!School.sid && !!Cloud.fs;
   const TagPub = { timer: null, due: 0, busy: false, again: false, sid: '', saved: null, blocked: false };
   function scheduleTagPublish(delay = 3000) {
-    if (!canLookup() || Store.mode !== 'fs' || TagPub.blocked) return;
+    if (!canLookup() || Store.mode !== 'fs' || TagPub.blocked || ui.kioskWin) return;
     const due = Date.now() + delay;
     if (TagPub.timer && TagPub.due <= due) return;   // already coming up sooner
     clearTimeout(TagPub.timer);
@@ -4737,15 +5104,31 @@ code.nw { white-space: nowrap; }
   const foundName = (f) => `${f.nick || f.first} ${f.last}`.trim();
   const foundFrom = (f) => (f.byName ? `From ${f.byName}’s class` : 'From another class at your school');
 
-  // The teacher was removed from the school (or left on another device).
+  // The teacher was removed from the school (or left on another device). TapRoll lets go of the school and clears
+  // schoolId, which is their link to it; if it can't save yet (still loading), it does once it can. Until then the
+  // school isn't opened again, so this doesn't repeat. If the school has invited them again, the invite shows.
   function schoolLost() {
-    const name = School.name;
-    School.state = 'none'; School.role = null;
+    const sid = School.sid;
+    const name = School.name || S.settings.school || '';
+    School.subs.forEach(offSub); School.subs = [];
+    offSub(School.passSub); School.passSub = null; School.passes = [];
     stopStaff();
-    if (editable()) setSettings({ schoolId: '' });
+    Object.assign(School, { sid: '', name: '', owner: '', role: null, state: 'none', members: {}, invites: {}, membersLoaded: false, error: null });
     if (ui.view === 'school') { ui.view = 'overview'; ui.periodId = null; }
-    toast({ kind: 'info', text: name ? `You’re no longer part of ${name}` : 'You’re no longer part of a school', sub: 'Your classes stay in your account.' });
+    if (sid && School.lostSid !== sid) {
+      School.lostSid = sid;
+      if (School.leaving === sid) { clearLostSchool(); checkInvite(); schoolChanged(); return; }
+      const again = School.inviteAll.some((inv) => inv.sid === sid);
+      toast({ kind: 'info', text: name ? `You’re no longer part of ${name}` : 'You’re no longer part of a school', sub: again ? 'They’ve invited you again. Choose Review invite to rejoin.' : 'Your classes stay in your account.' });
+    }
+    clearLostSchool();
+    checkInvite();
     schoolChanged();
+  }
+  // Only while that school isn't open again: if they rejoin it on another device, its schoolId comes back and stays.
+  function clearLostSchool() {
+    const sid = School.lostSid;
+    if (School.kind === 'cloud' && sid && School.sid !== sid && String(S.settings.schoolId || '') === sid && editable()) setSettings({ schoolId: '' });
   }
 
   // Admins and registrars watch every member's classes live.
@@ -4984,8 +5367,10 @@ code.nw { white-space: nowrap; }
     b.set(dref(`teachers/${me.uid}`), { schoolId: inv.sid, school: inv.school || '' }, { merge: true });
     School.autoOpened = false;
     await b.commit();
-    setInvites(School.inviteList.filter((x) => x.sid !== inv.sid));
-    School.inviteState = School.inviteList.length ? 'found' : 'none';
+    School.inviteAll = School.inviteAll.filter((x) => x.sid !== inv.sid);
+    // Rejoining a school this person was removed from: its schoolId may never have changed, so open it here.
+    if (School.lostSid === inv.sid) School.lostSid = '';
+    if (School.sid !== inv.sid) schoolAttach(inv.sid);
   }
   async function declineInvite(inv) {
     const me = School.me;
@@ -4994,8 +5379,7 @@ code.nw { white-space: nowrap; }
     b.delete(dref(`schools/${inv.sid}/invites/${me.email}`));
     b.delete(dref(`invites/${inv.sid}~${me.email}`));
     await b.commit();
-    setInvites(School.inviteList.filter((x) => x.sid !== inv.sid));
-    School.inviteState = School.inviteList.length ? 'found' : 'none';
+    School.inviteAll = School.inviteAll.filter((x) => x.sid !== inv.sid);
   }
   async function leaveSchool() {
     const me = School.me;
@@ -5003,12 +5387,15 @@ code.nw { white-space: nowrap; }
     const b = Cloud.fs.batch();
     b.delete(dref(`schools/${School.sid}/members/${me.uid}`));
     b.set(dref(`teachers/${me.uid}`), { schoolId: '' }, { merge: true });
-    await b.commit();
+    // So schoolLost doesn't also say "You're no longer part of ...", whether Firestore tells it before or after this.
+    const sid = School.sid;
+    School.leaving = sid;
+    try { await b.commit(); if (School.sid === sid) School.lostSid = sid; } finally { School.leaving = ''; }
   }
   async function inviteOne(email, role) {
     const at = Date.now();
     const rec = { role, byName: meName().slice(0, 80), byEmail: School.me.email, at };
-    if (School.kind === 'demo') { School.invites[email] = { ...rec, email }; saveDemoSchool(); return; }
+    if (School.kind === 'demo') { School.invites[email] = { ...rec, email }; saveDemoSchool(); demoRejoinLater(email); return; }
     const b = Cloud.fs.batch();
     b.set(dref(`schools/${School.sid}/invites/${email}`), { ...rec, email });
     b.set(dref(`invites/${School.sid}~${email}`), { ...rec, email, sid: School.sid, school: School.name });
@@ -5025,7 +5412,11 @@ code.nw { white-space: nowrap; }
   async function removeMember(uid) {
     const email = emailKey((School.members[uid] || {}).email);
     const inv = email ? School.invites[email] : null;
-    if (School.kind === 'demo') { delete School.members[uid]; delete School.t[uid]; if (inv) delete School.invites[email]; saveDemoSchool(); return; }
+    if (School.kind === 'demo') {
+      const m = School.members[uid], t = School.t[uid];
+      if (m && email) School.gone[email] = { uid, name: m.name || '', periods: t ? t.periods : null, students: t ? t.students : null };
+      delete School.members[uid]; delete School.t[uid]; if (inv) delete School.invites[email]; saveDemoSchool(); return;
+    }
     const b = Cloud.fs.batch();
     b.delete(dref(`schools/${School.sid}/members/${uid}`));
     if (inv && (inv.role === 'teacher' || isAdmin())) {
@@ -5080,7 +5471,7 @@ code.nw { white-space: nowrap; }
   }
   // A school office account with no classes of its own opens to the School office.
   function maybeOpenOffice() {
-    if (School.autoOpened || !isStaff() || !ui.ready || ui.screen !== 'app') return;
+    if (School.autoOpened || !isStaff() || !ui.ready || ui.screen !== 'app' || ui.kioskWin) return;
     School.autoOpened = true;
     if (pendingSchoolLink || (ui.view === 'overview' && !Object.keys(S.periods).length)) {
       pendingSchoolLink = false;
@@ -5640,7 +6031,7 @@ code.nw { white-space: nowrap; }
   function openSchoolPanel() {
     if (isStaff()) { openSchoolView(); return; }
     ui.scPanel = true;
-    if (School.kind === 'cloud' && School.state === 'none' && School.inviteState !== 'checking' && School.inviteState !== 'unverified') checkInvite();
+    if (School.kind === 'cloud') checkInvite();
     openModal(`${modalHead('Your school')}<div class="m-body" id="school-panel">${schoolSectionInner()}</div>`, { label: 'Your school', onClose: () => { ui.scPanel = false; } });
   }
   function refreshSchoolPanel() { const el = $('#school-panel'); if (el) el.innerHTML = schoolSectionInner(); }
@@ -6087,7 +6478,7 @@ code.nw { white-space: nowrap; }
         confirmBox({
           title: `Leave ${School.name}?`, body: `${School.name}’s admins and registrars won’t see your classes anymore. Your classes and students, including any the school office added, stay in your account.`,
           okLabel: 'Leave school', danger: true,
-          onOk: () => leaveSchool().then(() => toast({ kind: 'info', text: `You left ${School.name}` })).catch((e) => toast({ kind: 'warn', text: 'Couldn’t leave', sub: schoolErrText(e, 'leaving the school') }))
+          onOk: () => { const name = School.name; leaveSchool().then(() => toast({ kind: 'info', text: `You left ${name}` })).catch((e) => toast({ kind: 'warn', text: 'Couldn’t leave', sub: schoolErrText(e, 'leaving the school') })); }
         });
         break;
       case 'sc-verify-send':
@@ -6129,12 +6520,29 @@ code.nw { white-space: nowrap; }
     if (!fresh) { try { saved = JSON.parse(localStorage.getItem(DEMO_SCHOOL_KEY) || 'null'); } catch (e) { saved = null; } }
     if (saved && isObj(saved) && saved.date === todayStr() && saved.base === S.settings.sampleDate && isObj(saved.t) && isObj(saved.members)) {
       School.members = saved.members; School.invites = isObj(saved.invites) ? saved.invites : {};
+      School.gone = isObj(saved.gone) ? saved.gone : {};
       for (const [uid, t] of Object.entries(saved.t)) {
         School.t[uid] = { uid, profile: { teacher: (saved.members[uid] || {}).name || '' }, ws: 'demo', periods: cleanMap(t.periods, normPeriod), students: cleanMap(t.students, normStudent), day: {}, status: 'ready' };
       }
     } else buildDemoSchool();
     demoRefreshDays();
     saveDemoSchool();
+    Object.keys(School.invites).forEach(demoRejoinLater);
+  }
+  // Made-up teachers you removed from the example school accept a new invite a few seconds later, as a real teacher
+  // does by signing in and choosing Join, so you can see them come back with their classes.
+  function demoRejoinLater(email) {
+    if (!School.gone[email]) return;
+    setTimeout(() => {
+      const g = School.gone[email], inv = School.invites[email];
+      if (School.kind !== 'demo' || !g || !inv) return;
+      School.members[g.uid] = { role: inv.role, name: g.name, email, at: Date.now() };
+      if (g.periods) School.t[g.uid] = { uid: g.uid, profile: { teacher: g.name }, ws: 'demo', periods: cleanMap(g.periods, normPeriod), students: cleanMap(g.students, normStudent), day: {}, status: 'ready' };
+      delete School.invites[email]; delete School.gone[email];
+      demoRefreshDays(); saveDemoSchool();
+      toast({ kind: 'ok', text: `${g.name} joined ${School.name}`, sub: 'In a real school, this happens when they sign in and choose Join.' });
+      schoolChanged();
+    }, 3000);
   }
   function buildDemoSchool() {
     const bell = (window.TapRollDemo && window.TapRollDemo.periods) || [];
@@ -6214,7 +6622,7 @@ code.nw { white-space: nowrap; }
     if (School.kind !== 'demo') return;
     const t = {};
     for (const [uid, d] of Object.entries(School.t)) t[uid] = { periods: d.periods, students: d.students };
-    try { localStorage.setItem(DEMO_SCHOOL_KEY, JSON.stringify({ date: todayStr(), base: S.settings.sampleDate, members: School.members, invites: School.invites, t })); } catch (e) { /* storage full or blocked */ }
+    try { localStorage.setItem(DEMO_SCHOOL_KEY, JSON.stringify({ date: todayStr(), base: S.settings.sampleDate, members: School.members, invites: School.invites, gone: School.gone, t })); } catch (e) { /* storage full or blocked */ }
   }
 
   /* ============================== Late passes ==============================
@@ -6829,6 +7237,7 @@ code.nw { white-space: nowrap; }
     Session.office = false;
     ui.ready = false; ui.readOnly = false; ui.syncError = null; ui.scanning = false;
     releaseWakeLock();
+    Peers.ping();   // signed out here: the other windows stop counting this one
   }
   function enterApp() {
     ui.screen = 'app';
@@ -6843,6 +7252,8 @@ code.nw { white-space: nowrap; }
     ui.readOnly = false; ui.syncError = null;
     firstReadyDone = false;
     lastChip = null;
+    if (ui.kioskWin) { ui.kiosk = true; kioskAway = 0; requestWakeLock(); }
+    Peers.ping();   // so the other TapRoll windows for this account know about this one now
     window.scrollTo({ top: 0 });
     dataChanged();
   }
@@ -6895,13 +7306,13 @@ code.nw { white-space: nowrap; }
     Session.user = { id: 'demo', name: 'Example classroom', email: '' };
     Store.openLocal(DEMO_KEY, () => makeDemoState());
     // Example data is built around today's bell schedule, so refresh it on a new day.
-    if (S.settings.sampleDate !== todayStr()) { S = makeDemoState(); Store.saveLocalSoon(); }
+    if (S.settings.sampleDate !== todayStr()) { S = makeDemoState(); Store.replacedLocal(); }
     schoolStartDemo();
     enterApp();
   }
   function resetDemoData(seed) {
     S = makeDemoState(seed);
-    Store.saveLocalSoon();
+    Store.replacedLocal();
     schoolStartDemo(true);
     resetView();
     pickInitialView();
@@ -7403,7 +7814,7 @@ code.nw { white-space: nowrap; }
   }
   const legacySkipKey = () => `taproll.legacy.skip.${Session.kind}.${Session.user ? Session.user.id : ''}`;
   function maybeOfferImport() {
-    if ((Session.kind !== 'device' && Session.kind !== 'cloud') || !editable() || modal.open) return;
+    if ((Session.kind !== 'device' && Session.kind !== 'cloud') || !editable() || modal.open || ui.kioskWin) return;
     if (Object.keys(S.periods).length || lsGet(legacySkipKey())) return;
     const legacy = readLegacy();
     if (!legacy) return;
