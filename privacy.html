@@ -128,7 +128,7 @@ strong { color: var(--ink); }
 <header class="top"><div class="top-in"><a class="brand" href="./"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8l3.4 3.4 6-7.2"/><path d="M15.8 8.4a5 5 0 0 1 0 7.2"/><path d="M18.7 5.9a8.6 8.6 0 0 1 0 12.2"/></svg></span>TapRoll</a><a class="open" href="app.html">Open TapRoll</a></div></header>
 <main class="doc">
 <h1>Privacy Policy</h1>
-<p class="date">Effective November 11, 2026</p>
+<p class="date">Effective November 12, 2026</p>
 <p class="lead">TapRoll helps teachers take attendance with NFC tags. This policy explains what information TapRoll collects, how it’s used and the choices you have. It applies to TapRoll at taprolleducation.com.</p>
 
 <section class="summary" aria-labelledby="short">
@@ -160,6 +160,10 @@ strong { color: var(--ink); }
   <div>
     <dt>Name</dt>
     <dd>First and last name, so you can see who checked in.<span class="eg"><code>Ada Lovelace</code></span></dd>
+  </div>
+  <div>
+    <dt>Nickname</dt>
+    <dd>If you add one, the name the student goes by, shown in your class when they check in. Emails and exports use their full name.<span class="eg"><code>Addie</code></span></dd>
   </div>
   <div>
     <dt>Class periods</dt>
@@ -232,6 +236,7 @@ strong { color: var(--ink); }
 <p>We share information only in these cases:</p>
 <ul>
   <li><strong>Within a school.</strong> When a teacher joins a school in TapRoll, that school’s admins and registrars can see the teacher’s classes, students and attendance, and can add students to the teacher’s classes. A school’s admins and registrars can see its members’ names, email addresses and roles. A teacher can leave the school at any time, and an admin can remove anyone except the person who set up the school. Either one ends the school’s access to that teacher’s classes.</li>
+  <li><strong>Finding students by their tags.</strong> In a school, each teacher’s TapRoll shares the name and nickname behind each tag in their classes (with the tag’s code or serial number, and the teacher’s name) with the school’s other members. When a student taps their tag in another teacher’s class, that teacher’s TapRoll finds the student’s name, so the teacher can add them without typing it. A member can see an entry only by tapping that student’s tag, not as a list, and it holds no parent emails or attendance. Teachers not in a school share nothing this way.</li>
   <li><strong>Late passes.</strong> A late pass a teacher sends is shared with the other members of their school (the teacher’s name, the period and the students’ names), so each teacher’s TapRoll can excuse those students’ tardies in their own class.</li>
   <li><strong>Parents.</strong> With automatic emails on, a parent gets an email about their own student’s absence or tardy, as described above.</li>
   <li><strong>Service providers.</strong> Google Firebase provides TapRoll’s sign-in and database, and GitHub hosts the website. For automatic parent emails, Cloudflare runs the service that sends them and Resend delivers them. They handle information only to provide their services to us.</li>
@@ -247,7 +252,7 @@ strong { color: var(--ink); }
 <h2 id="retention">How long we keep information</h2>
 <p>We keep your account and classes until you delete them or ask us to delete your account.</p>
 <ul>
-  <li>When you remove a student, TapRoll deletes their name and tag details.</li>
+  <li>When you remove a student, TapRoll deletes their name and tag details. In a school, it also removes what it shared for finding them by their tag, unless another teacher who has the student shared it too.</li>
   <li>When you remove a class period, TapRoll deletes it, along with students who were only in that period.</li>
   <li><strong>Start fresh</strong> in Settings deletes all of your classes, students and attendance records.</li>
   <li>When a teacher leaves a school or is removed from it, the school office can no longer see their classes. Students the school office added stay in the teacher’s classes until the teacher removes them.</li>
