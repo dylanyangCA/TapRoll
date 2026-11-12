@@ -616,6 +616,39 @@ code {
   .pm-row { grid-template-columns: 62px minmax(0, 1fr); }
   .pm-act { grid-column: 2; justify-content: flex-start; }
 }
+/* Add students: tags tapped while the window is open */
+.tapbox { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--line); }
+.tapbox-head { display: flex; align-items: flex-start; gap: 10px; }
+.tapbox-head > .ic { width: 20px; height: 20px; color: var(--accent); flex: none; margin-top: 1px; }
+.tapbox-head b { display: block; font-size: 14px; }
+.tapbox-head span { display: block; font-size: 12.5px; color: var(--muted); }
+.tapbox-src { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tapbox-src .src { align-items: center; }
+.tapbox-src .src .pulse { margin: 0 3px; }
+.tap-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 38vh; overflow: auto; border-top: 1px solid var(--line); }
+.tap-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tap-row .pill { justify-self: start; }
+.tap-row.here .tap-who { opacity: .7; }
+.tap-row.flash { animation: flash 1.2s ease-out; }
+.tap-who { min-width: 0; display: flex; flex-direction: column; }
+.tap-who b { font-size: 14px; }
+.tap-who span { font-size: 12.5px; color: var(--muted); }
+.tap-name { min-width: 0; }
+.tap-name .input { width: 100%; min-height: 36px; }
+#af-match:empty { display: none; }
+#af-match .op-body p { margin: 0; }
+
+/* Email registrar: what the email will list */
+.reg-box { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.reg-subj { margin: 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.reg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 34vh; overflow: auto; }
+.reg-row { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.reg-row .pill { justify-self: start; }
+.reg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0 4px; font-size: 13px; }
+.reg-head:first-child { padding-top: 2px; }
+.reg-head span, .reg-none { font-size: 12.5px; color: var(--muted); }
+.reg-none { padding: 6px 0; border-top: 1px solid var(--line); }
+.reg-head + .reg-none, .reg-head + .reg-row { border-top: 0; }
 .excuse-form { display: flex; flex-direction: column; gap: 12px; }
 .reasons { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .reasons legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
@@ -1183,6 +1216,8 @@ code.nw { white-space: nowrap; }
    * opts.now        Date used as "today" (default: now)
    * opts.nowMinutes minutes after midnight used to decide which of today's periods have happened
    * opts.seed       random seed
+   * opts.parents    give most students a made-up parent email at example.com (only where nothing sends email
+   *                 automatically, so these addresses are never actually emailed)
    * Returns { settings, periods, students, days } in TapRoll's state shape.
    */
   function generate(opts) {
@@ -1216,6 +1251,10 @@ code.nw { white-space: nowrap; }
           token: hasTag ? code(12) : null, uids: [],
           tagAt: hasTag ? now.getTime() - (3 + Math.floor(rand() * 25)) * 86400000 : null
         };
+        // Worked out from the name rather than drawn at random, so the rest of the example stays the same.
+        if (opts.parents && (first.length + last.length) % 6 !== 0) {
+          students[id].parents = [(first + '.' + last).toLowerCase().replace(/[^a-z0-9.]+/g, '') + '.family@example.com'];
+        }
         risk[id] = {
           abs: r < 0.07 ? 0.16 + rand() * 0.14 : (r < 0.2 ? 0.05 + rand() * 0.05 : 0.012),
           tardy: rand() < 0.15 ? 0.12 : 0.025
@@ -1395,7 +1434,8 @@ code.nw { white-space: nowrap; }
   const STATUS_CLS = { P: 'p', T: 't', A: 'a', E: 'e' };
   const METHOD = { nfc: 'NFC tag', usb: 'USB reader', manual: 'by hand', link: 'tag link', demo: 'simulated tap' };
   const METHOD_ICON = { nfc: 'nfc', usb: 'usb', manual: 'hand', link: 'link', demo: 'spark' };
-  const DEFAULT_SETTINGS = { school: '', teacher: '', graceMin: 5, tagBase: '', sample: false, ws: '' };
+  // registrar: where Email registrar sends the day's absences and tardies (the teacher types it once).
+  const DEFAULT_SETTINGS = { school: '', teacher: '', graceMin: 5, tagBase: '', sample: false, ws: '', registrar: '' };
   // Each period has a passing time (check-in opens this many minutes before its bell) and a tardy grace (taps up to
   // this many minutes after the bell still count as present). Periods saved before these existed use the defaults:
   // the passing time below, and the grace from Settings (graceMin), which used to apply to every period.
@@ -1436,8 +1476,77 @@ code.nw { white-space: nowrap; }
       subject = `${name} was late to ${cls} on ${short}`;
       line = `${name} arrived late to ${cls} ${when}, checking in at ${fmtClock(mk.t)}${late > 0 ? `, ${late} minute${late === 1 ? '' : 's'} after the bell` : ''}.`;
     }
-    const sign = [S.settings.teacher || (Session.user && Session.user.name) || '', S.settings.school || ''].filter(Boolean);
-    return { subject, body: ['Hello,', '', line, '', 'If you have any questions, please reply to this email.', '', 'Thank you,', ...sign].join('\r\n') };
+    return { subject, body: ['Hello,', '', line, '', 'If you have any questions, please reply to this email.', '', 'Thank you,', ...mailSignature()].join('\r\n') };
+  }
+  const mailSignature = () => [S.settings.teacher || (Session.user && Session.user.name) || '', S.settings.school || ''].filter(Boolean);
+  const classText = (p) => `${periodLabel(p)}${p.course ? ` (${p.course})` : ''}`;
+  // An email to a student's parent about anything, from the student's details. The teacher writes the middle.
+  function parentNote(st) {
+    const periods = st.periods.map((id) => S.periods[id]).filter(Boolean).sort((a, b) => a.num - b.num);
+    const where = periods.length === 1 ? ` in ${classText(periods[0])}` : '';
+    return { subject: `About ${fullName(st)}`, body: ['Hello,', '', `I'm reaching out about ${fullName(st)}${where}.`, '', '', '', 'Thank you,', ...mailSignature()].join('\r\n') };
+  }
+  // A link that opens a written email in the app chosen in "Open emails in" (this device).
+  function mailAnchor(to, msg, label, attrs = '', cls = 'btn sm') {
+    const web = prefs.mailVia !== 'app';
+    return `<a class="${cls}" href="${esc(composeUrl(to, msg.subject, msg.body))}"${web ? ' target="_blank" rel="noopener"' : ''} ${attrs}>${ic('mail')} ${esc(label)}</a>`;
+  }
+
+  /* Email registrar: the absences and tardies in one class, or in all of the teacher's classes, on one day, written
+     out for the school's registrar or attendance office. It opens in the teacher's own email, like parent emails. */
+  function regGroups(date, pids) {
+    return pids.map((id) => S.periods[id]).filter(Boolean).map((p) => {
+      const marks = marksOf(date, p.id);
+      const g = { p, A: [], E: [], T: [], X: [], U: [], marked: 0, total: 0 };
+      for (const st of rosterOf(p.id)) {
+        g.total++;
+        const mk = marks[st.id];
+        if (!mk) { g.U.push({ st }); continue; }
+        g.marked++;
+        if (mk.s === 'A') g.A.push({ st, mk });
+        else if (mk.s === 'E') g.E.push({ st, mk });
+        else if (mk.s === 'T') g.T.push({ st, mk });
+        else if (mk.xt) g.X.push({ st, mk });
+      }
+      return g;
+    }).filter((g) => g.total);
+  }
+  function lateText(p, mk) {
+    const bell = toMin(p.start), at = new Date(mk.t);
+    const late = bell == null ? 0 : at.getHours() * 60 + at.getMinutes() - bell;
+    return `in at ${fmtClock(mk.t)}${late > 0 ? `, ${late} min late` : ''}`;
+  }
+  // The rows each group lists, in order: [label, entries, detail for one entry].
+  const regSections = (g) => [
+    ['Absent', g.A, () => ''],
+    ['Excused absence', g.E, () => ''],
+    ['Tardy', g.T, (x) => lateText(g.p, x.mk)],
+    ['Excused tardy', g.X, (x) => `${lateText(g.p, x.mk)}${x.mk.why ? ` (${x.mk.why})` : ''}`]
+  ];
+  function registrarMessage(date, groups, oneClass) {
+    const d = parseDate(date);
+    const day = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const short = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const sum = (k) => groups.reduce((n, g) => n + g[k].length, 0);
+    const counts = [sum('A') + sum('E') ? `${sum('A') + sum('E')} absent` : '', sum('T') + sum('X') ? `${sum('T') + sum('X')} tardy` : ''].filter(Boolean).join(', ') || 'no absences or tardies';
+    const what = oneClass && groups[0] ? classText(groups[0].p) : 'my classes';
+    const lines = ['Hello,', '', `Here are the absences and tardies for ${what} ${date === todayStr() ? `today, ${day}` : `on ${day}`}.`, ''];
+    for (const g of groups) {
+      if (!oneClass) lines.push(`${classText(g.p)}${g.p.start ? `, ${fmtHMap(g.p.start)}` : ''}`);
+      if (!g.marked) { lines.push('Attendance not taken.', ''); continue; }
+      let any = false;
+      for (const [label, list, detail] of regSections(g)) {
+        if (!list.length) continue;
+        any = true;
+        lines.push(`${label} (${list.length}):`);
+        for (const x of list) { const more = detail(x); lines.push(`- ${fullName(x.st)}${more ? `, ${more}` : ''}`); }
+      }
+      if (!any) lines.push('No absences or tardies.');
+      if (g.U.length) lines.push(`Not marked (${g.U.length}): ${g.U.map((x) => fullName(x.st)).join(', ')}`);
+      lines.push('');
+    }
+    lines.push('Thank you,', ...mailSignature());
+    return { subject: `Attendance for ${what} on ${short}: ${counts}`, body: lines.join('\r\n') };
   }
   function composeUrl(to, subject, body, via = prefs.mailVia) {
     const e = encodeURIComponent;
@@ -1483,6 +1592,8 @@ code.nw { white-space: nowrap; }
     screen: 'boot', ready: false, view: 'overview', periodId: null, date: todayStr(),
     filter: 'all', search: '', scanning: false, kiosk: false, readOnly: false,
     syncError: null, hideSample: false, feed: [], flash: null, lastEvent: null, openStudent: null, excuseFor: null, parentsOpen: false,
+    // Email registrar: open, and its choices (one class or all of them, the address being typed, when it was opened)
+    regOpen: false, reg: { scope: 'period', to: '', sentAt: 0 },
     // School office: the open tab, the student search, open drawers and dialogs
     scTab: 'live', scSearch: '', scAll: false, scDrawer: null, scPanel: false, scInviteOpen: false, impOpen: false, hideInvite: false
   };
@@ -1986,6 +2097,8 @@ code.nw { white-space: nowrap; }
       const now = Date.now();
       if (key && key === this.lastKey && now - this.lastAt < 2500) return;
       this.lastKey = key; this.lastAt = now;
+      // While Add students is open, a tap adds the student instead of checking them in.
+      if (AddTap.open) { addTapTake({ token: info.token, serial: info.serial }); return; }
       handleScan({ token: info.token, serial: info.serial, source: 'nfc' });
     },
     explain(err) {
@@ -2055,8 +2168,9 @@ code.nw { white-space: nowrap; }
   /* ============================== USB reader (keyboard emulation) ==============================
      Most plug-and-play USB NFC readers "type" the tag's ID followed by Enter, much faster than
      a person can type. A fast burst ending in Enter counts as a scan. */
+  // capture takes the next scan only (linking a tag); collect takes every scan while it's set (Add students).
   const Wedge = {
-    buf: '', last: 0, capture: null,
+    buf: '', last: 0, capture: null, collect: null,
     init() { document.addEventListener('keydown', (e) => this.onKey(e), true); },
     onKey(e) {
       if (!Session.kind) return;   // nothing to check in on the sign-in screen
@@ -2083,6 +2197,7 @@ code.nw { white-space: nowrap; }
     },
     emit(code) {
       if (this.capture) { const fn = this.capture; this.capture = null; fn(code.trim()); return; }
+      if (this.collect) { primeAudio(); this.collect(code.trim()); return; }
       if (modal.open) { toast({ kind: 'info', text: 'Scan ignored', sub: 'Close the open window to check students in.' }); return; }
       primeAudio();
       handleScan({ uid: code.trim(), source: 'usb' });
@@ -2147,7 +2262,10 @@ code.nw { white-space: nowrap; }
         text: scan.token ? 'This tag isn’t in your classes' : 'Unknown tag',
         sub: scan.token ? 'It may be set up for another class. Link it to a student to use it here too.' : 'Link it to a student to start using it.'
       };
-      if (editable() && Object.keys(S.students).length) ev.actions = [{ label: 'Link to student', run: () => openAssign(scan) }];
+      if (editable()) {
+        ev.actions = [{ label: 'New student', run: () => openNewTagStudent(scan) }];
+        if (Object.keys(S.students).length) ev.actions.unshift({ label: 'Link to student', run: () => openAssign(scan) });
+      }
       report(ev);
       return;
     }
@@ -2156,7 +2274,10 @@ code.nw { white-space: nowrap; }
     const p = S.periods[target.pid];
     if (!st.periods.includes(p.id)) {
       const other = st.periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ');
-      report({ kind: 'warn', text: fullName(st), sub: `Not on the ${periodLabel(p)} roster${other ? ` · in ${other}` : ''}`, pid: p.id });
+      const ev = { kind: 'warn', text: fullName(st), sub: `Not on the ${periodLabel(p)} roster${other ? ` · in ${other}` : ''}`, pid: p.id };
+      // Already in another of this teacher's classes: one tap adds them here, with the same tag and parent emails.
+      if (editable()) ev.actions = [{ label: `Add to ${periodLabel(p)}`, run: () => addToClassAndCheckIn(st.id, p.id, scan) }];
+      report(ev);
       return;
     }
     const prev = marksOf(target.date, p.id)[st.id] || null;
@@ -2173,7 +2294,7 @@ code.nw { white-space: nowrap; }
     setMark(target.date, p.id, st.id, pass ? { s, t, m: scan.source, xt: 1, why: passWhy(pass), px: pass.id } : { s, t, m: scan.source });
     const ev = {
       kind: s === 'T' ? 'tardy' : 'present', text: fullName(st),
-      sub: `${pass ? `Excused tardy (${passWhy(pass)})` : STATUS[s]} · ${periodLabel(p)} · ${fmtClock(t)}`, pid: p.id, sid: st.id,
+      sub: `${scan.added ? 'Added to the roster · ' : ''}${pass ? `Excused tardy (${passWhy(pass)})` : STATUS[s]} · ${periodLabel(p)} · ${fmtClock(t)}`, pid: p.id, sid: st.id,
       actions: [{ key: 'undo', label: 'Undo', run: () => { setMark(target.date, p.id, st.id, prev); scheduleRender(); } }]
     };
     // A late student often has a reason (another teacher kept them), so offer to excuse it right away.
@@ -2471,7 +2592,8 @@ code.nw { white-space: nowrap; }
     const today = todayStr();
     const list = periodList();
     const head = `<header class="vhead"><div class="vhead-text"><div class="eyebrow">${esc(fmtDateLong(today))}${S.settings.school ? ` · ${esc(S.settings.school)}` : ''}</div>`
-      + `<h1 class="vtitle">Today</h1></div><div class="vhead-actions">${editable() ? `<button class="btn sm" data-act="add-period">${ic('plus')} Add period</button>` : ''}</div></header>`;
+      + `<h1 class="vtitle">Today</h1></div><div class="vhead-actions">${editable() && list.length ? `<button class="btn sm" data-act="email-registrar" data-scope="day">${ic('mail')} Email registrar</button>` : ''}`
+      + `${editable() ? `<button class="btn sm" data-act="add-period">${ic('plus')} Add period</button>` : ''}</div></header>`;
     if (!list.length) {
       const legacy = Session.kind !== 'demo' && readLegacy();
       return head + banners() + `<div class="empty"><h3>Set up your bell schedule</h3><p>Add each period you teach with its bell times, then paste in each roster. TapRoll uses the bell times to decide when a tap counts as tardy.</p>`
@@ -2613,7 +2735,8 @@ code.nw { white-space: nowrap; }
     const tools = `<div class="rtools"><label class="search">${ic('search')}<span class="sr-only">Search students</span>`
       + `<input class="input" id="roster-search" type="search" placeholder="Search ${roster.length} students" value="${esc(ui.search)}" autocomplete="off"></label>`
       + `<div class="chips">${filters.map(([v, l, n]) => `<button class="chip" data-act="filter" data-v="${v}" aria-pressed="${ui.filter === v}">${l} <b>${n}</b></button>`).join('')}</div>`
-      + `${editable() ? `<div class="rtools-actions">${c.A + c.T ? `<button class="btn sm" data-act="email-parents">${ic('mail')} Email parents${pendingEmails(p, date) ? ` <b class="cnt">${pendingEmails(p, date)}</b>` : ''}</button>` : ''}`
+      + `${editable() ? `<div class="rtools-actions"><button class="btn sm" data-act="email-parents">${ic('mail')} Email parents${pendingEmails(p, date) ? ` <b class="cnt">${pendingEmails(p, date)}</b>` : ''}</button>`
+        + `<button class="btn sm" data-act="email-registrar">${ic('mail')} Email registrar</button>`
         + `${isToday && phaseOf(p) !== 'later' && roster.length ? `<button class="btn sm" data-act="late-pass">${ic('clock')} Kept class late</button>` : ''}`
         + `<button class="btn sm" data-act="mark-rest" ${c.U ? '' : 'disabled'}>Mark ${c.U} not-yet absent</button><button class="btn sm primary" data-act="add-students">${ic('plus')} Add students</button></div>` : ''}</div>`
       + latePassNote(p, date) + autoMailNote(p, date) + autoMailOffer(p, date);
@@ -2707,6 +2830,7 @@ code.nw { white-space: nowrap; }
     if (!modal.open) return;
     NFC.cancelBusy();
     Wedge.capture = null;
+    Wedge.collect = null;
     const fn = modal.onClose;
     modal.open = false; modal.onClose = null;
     $('#modal-root').innerHTML = '';
@@ -2723,13 +2847,14 @@ code.nw { white-space: nowrap; }
   function linkResult(ev) {
     beep(ev.kind); buzz(ev.kind);
     const color = TOAST_BG[ev.kind] || 'var(--u)';
-    const act = ev.actions && ev.kind === 'unknown' ? ev.actions[0] : null;
+    // Buttons for the actions a result offers (Link to student, New student, Add to Period 2). Undo and Excuse have their own.
+    const acts = (ev.actions || []).filter((x) => !x.key);
     openModal(`<div class="confirm-big"><span class="badge" style="background:${color}">${ic(TOAST_ICON[ev.kind] || 'info').replace('class="ic"', 'class="ic big"')}</span>`
-      + `<h2>${esc(ev.text)}</h2><p>${esc(ev.sub || '')}</p></div><div class="m-foot">${act ? `<button class="btn" id="lr-act">${esc(act.label)}</button>` : ''}`
+      + `<h2>${esc(ev.text)}</h2><p>${esc(ev.sub || '')}</p></div><div class="m-foot">${acts.map((a, i) => `<button class="btn" data-lr="${i}">${esc(a.label)}</button>`).join('')}`
       + `${ev.kind === 'present' || ev.kind === 'tardy' ? `<button class="btn" id="lr-undo">Undo</button>` : ''}`
       + `${ev.kind === 'tardy' ? `<button class="btn" id="lr-excuse">Excuse tardy</button>` : ''}<button class="btn primary" data-act="close-modal">Done</button></div>`, { label: 'Check-in' });
     const pick = (key) => (ev.actions || []).find((x) => x.key === key);
-    const a = $('#lr-act'); if (a) a.addEventListener('click', () => { closeModal(); act.run(); });
+    document.querySelectorAll('#modal-root [data-lr]').forEach((b) => b.addEventListener('click', () => { closeModal(); acts[Number(b.dataset.lr)].run(); }));
     const u = $('#lr-undo'); if (u) u.addEventListener('click', () => { closeModal(); pick('undo').run(); });
     const x = $('#lr-excuse'); if (x) x.addEventListener('click', () => { closeModal(); pick('excuse').run(); });
   }
@@ -2835,29 +2960,305 @@ code.nw { white-space: nowrap; }
       return { first: first.slice(0, 40), last: last.slice(0, 40), parents, badEmails };
     }).filter((n) => n.first || n.last);
   }
+  /* ----- Add students: typed names, and tags tapped while the window is open -----
+     A tag tapped on a USB reader, or on this phone once it's listening, is listed. A student already in another of
+     your classes is added as the same student, with the tag and parent emails they have. A tag that isn't linked to
+     anyone in your classes (for example one from another teacher's class) asks for a name, and the new student gets
+     that tag, so it checks them in here too. Typed names that match a student in another of your classes are added
+     as that student the same way, unless the teacher chooses to add them as new students. */
+  const AddTap = { open: false, list: [], ownScan: false, asNew: false };
+  const addPeriods = () => Array.from(document.querySelectorAll('#add-form input[name="af-p"]:checked')).map((i) => i.value);
+  const isIos = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // "A", "A and B", "A, B and C", or "A, B, C, D and 3 more".
+  function listText(items, max = 4) {
+    if (items.length <= max) return items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : (items[0] || '');
+    return `${items.slice(0, max).join(', ')} and ${items.length - max} more`;
+  }
+  const namesList = (sts, max) => listText(sts.map(fullName), max);
+  const shortPeriods = (st) => st.periods.map((id) => S.periods[id]).filter(Boolean).sort((a, b) => a.num - b.num).map((p) => `P${p.num}`).join(', ');
+  function studentsByName() {
+    const map = new Map();
+    for (const st of Object.values(S.students)) { const k = nameKey(st.first, st.last); if (!map.has(k)) map.set(k, []); map.get(k).push(st); }
+    return map;
+  }
+  // Who a submit would add. reuse: typed names that match one student in your classes join that student.
+  function planAdd(names, taps, periods, reuse) {
+    const changes = new Map();
+    const fresh = [];
+    const added = [], already = [];
+    let byTag = 0;
+    const cur = (id) => changes.get(id) || S.students[id];
+    const join = (st, extra) => {
+      const missing = periods.filter((pid) => !st.periods.includes(pid));
+      const rec = { ...st, ...extra, periods: [...st.periods, ...missing] };
+      rec.parents = extra.parents ? parseEmails([...st.parents, ...extra.parents].join(' ')).ok : st.parents;
+      if (missing.length || rec.token !== st.token || rec.uids !== st.uids || rec.parents.join() !== st.parents.join()) changes.set(st.id, rec);
+      (missing.length ? added : already).push(rec);
+    };
+    const taken = new Set();
+    for (const t of taps) {
+      const st = t.sid ? cur(t.sid) : null;
+      if (t.sid && !st) continue;   // removed meanwhile
+      if (st) {
+        if (taken.has(st.id)) continue;
+        taken.add(st.id);
+        const extra = {};
+        // A school tag tapped here for the first time, and a tag's serial number, are kept, as at check-in.
+        if (t.token && !st.token && st.sk === t.token) { extra.token = t.token; extra.tagAt = Date.now(); }
+        if (t.code && !uidIn(st.uids, t.code)) extra.uids = [...st.uids, t.code];
+        join(st, extra);
+        byTag++;
+        continue;
+      }
+      const n = parseNames(t.name)[0];
+      if (!n) continue;
+      const k = nameKey(n.first, n.last);
+      const same = reuse ? (studentsByName().get(k) || []).filter((s) => !taken.has(s.id)) : [];
+      if (same.length === 1) {
+        // A student you already have, with a tag from somewhere else: this tag works for them too.
+        const st = cur(same[0].id);
+        taken.add(st.id);
+        const extra = { parents: n.parents, tagAt: Date.now() };
+        if (!st.token && t.token) extra.token = t.token;
+        if (t.code && !uidIn(st.uids, t.code)) extra.uids = [...st.uids, t.code];
+        join(st, extra);
+      } else {
+        const rec = { id: 's' + rid(9), first: n.first, last: n.last, periods, token: t.token || null, uids: t.code ? [t.code] : [], tagAt: Date.now(), parents: n.parents };
+        fresh.push(rec); added.push(rec);
+        taken.add(rec.id);
+      }
+      byTag++;
+    }
+    const index = reuse ? studentsByName() : null;
+    const typedKeys = new Set();
+    for (const n of names) {
+      const k = nameKey(n.first, n.last);
+      if (typedKeys.has(k)) continue;
+      typedKeys.add(k);
+      const same = index ? (index.get(k) || []) : [];
+      if (same.length === 1) {
+        if (taken.has(same[0].id)) continue;
+        taken.add(same[0].id);
+        join(cur(same[0].id), { parents: n.parents });
+        continue;
+      }
+      if (fresh.some((f) => nameKey(f.first, f.last) === k)) continue;
+      const rec = { id: 's' + rid(9), first: n.first, last: n.last, periods, token: null, uids: [], tagAt: null, parents: n.parents };
+      fresh.push(rec); added.push(rec);
+    }
+    return { records: [...changes.values(), ...fresh], added, already, byTag };
+  }
+  function addTapSrc(pid) {
+    const nfc = NFC.status();
+    if (nfc.ok) {
+      return ui.scanning
+        ? `<span class="src ok"><span class="pulse"></span><span><b>Phone NFC:</b> listening. Students tap the back of this phone.</span></span>`
+        : `<button type="button" class="btn sm" data-act="add-tap-listen">${ic('nfc')} Listen for tags on this phone</button>`;
+    }
+    if (isIos()) {
+      const p = S.periods[pid];
+      return `<span class="src">${ic('info')}<span>iPhones can’t read tags from a website. Instead, open the class and have students tap in. Anyone from your other classes gets an <b>Add to ${esc(p ? periodLabel(p) : 'class')}</b> button.</span></span>`;
+    }
+    return `<span class="src ok">${ic('usb')}<span><b>USB reader:</b> ready. Students tap their tags on it.</span></span>`;
+  }
+  function addTapRows(periods) {
+    return AddTap.list.map((t) => {
+      const st = t.sid ? S.students[t.sid] : null;
+      if (t.sid && !st) return '';
+      const x = `<button type="button" class="btn ghost icon sm" data-tap-x="${esc(t.key)}" aria-label="Remove from the list">${ic('x')}</button>`;
+      if (!st) {
+        return `<li class="tap-row" data-key="${esc(t.key)}"><span class="pill t">New tag</span>`
+          + `<label class="tap-name"><span class="sr-only">Name for this tag</span><input class="input" data-tap-name="${esc(t.key)}" maxlength="160" autocomplete="off" spellcheck="false" placeholder="Type their name" value="${esc(t.name)}"></label>${x}</li>`;
+      }
+      const here = periods.length && periods.every((pid) => st.periods.includes(pid));
+      const where = here ? `Already in ${periods.map((id) => periodLabel(S.periods[id])).join(', ')}` : `In ${shortPeriods(st) || 'no class'}${st.parents.length ? ' · parent email on file' : ''}`;
+      return `<li class="tap-row${here ? ' here' : ''}" data-key="${esc(t.key)}"><span class="pill ${here ? 'u' : 'p'}">${here ? 'Already in' : 'Adding'}</span>`
+        + `<span class="tap-who"><b>${esc(fullName(st))}</b><span>${esc(where)}</span></span>${x}</li>`;
+    }).join('');
+  }
+  // Redraws the parts of Add students that depend on the taps, the names and the periods, keeping the caret where it was.
+  function addRefresh(focusKey) {
+    if (!AddTap.open) return;
+    const box = $('#af-taps');
+    if (!box) return;
+    const periods = addPeriods();
+    const act = document.activeElement;
+    const keep = act && act.dataset && act.dataset.tapName ? { key: act.dataset.tapName, s: act.selectionStart, e: act.selectionEnd } : null;
+    box.innerHTML = addTapRows(periods);
+    box.hidden = !AddTap.list.length;
+    if (focusKey) { const f = box.querySelector(`[data-tap-name="${CSS.escape(focusKey)}"]`); if (f) f.focus(); }
+    else if (keep) { const f = box.querySelector(`[data-tap-name="${CSS.escape(keep.key)}"]`); if (f) { f.focus(); try { f.setSelectionRange(keep.s, keep.e); } catch (e) { /* not text */ } } }
+    const src = $('#af-src');
+    if (src) src.innerHTML = addTapSrc(periods[0]);
+    // Typed names that are already students in your classes.
+    const names = parseNames($('#af-names').value);
+    const index = studentsByName();
+    const seen = new Set(), here = [], other = [];
+    for (const n of names) {
+      const k = nameKey(n.first, n.last);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const same = index.get(k) || [];
+      if (same.length !== 1) continue;
+      if (periods.length && periods.every((pid) => same[0].periods.includes(pid))) here.push(same[0]); else other.push(same[0]);
+    }
+    const note = $('#af-match');
+    if (note) {
+      const withClass = (sts) => listText(sts.map((s) => `${fullName(s)}${shortPeriods(s) ? ` (${shortPeriods(s)})` : ''}`));
+      note.innerHTML = other.length || here.length
+        ? `<div class="opstatus info">${ic('info')}<div class="op-body"><p>`
+          + (other.length === 1 ? `${esc(withClass(other))} is already in your other classes. It’s the same student, so their tag and parent email work here too. `
+            : other.length ? `${esc(withClass(other))} are already in your other classes. They’re the same students, so their tags and parent emails work here too. ` : '')
+          + (here.length ? `${esc(namesList(here))} ${here.length === 1 ? 'is' : 'are'} already in ${periods.length === 1 ? esc(periodLabel(S.periods[periods[0]])) : 'these periods'}. ` : '')
+          + `</p><label class="check fit"><input type="checkbox" id="af-new" ${AddTap.asNew ? 'checked' : ''}> Add ${other.length + here.length === 1 ? 'them as a new student' : 'them as new students'} instead</label></div></div>`
+        : '';
+    }
+    addCount();
+  }
+  // The submit button says how many students it will add.
+  function addCount() {
+    const go = $('#af-go');
+    if (!go) return;
+    const plan = planAdd(parseNames($('#af-names').value), AddTap.list, addPeriods(), !AddTap.asNew);
+    go.textContent = plan.added.length ? `Add ${plural(plan.added.length, 'student')}` : 'Add students';
+  }
+  function addTapTake(scan) {
+    if (!AddTap.open || !editable()) return;
+    const code = scan.uid || scan.serial || null;
+    const token = scan.token || null;
+    if (!code && !token) { beep('warn'); buzz('warn'); toast({ kind: 'warn', text: 'Couldn’t read that tag', sub: 'Hold it still against the reader and try again.' }); return; }
+    const st = (token && findByToken(token)) || (code && findByUid(code)) || null;
+    const same = AddTap.list.find((t) => (st ? t.sid === st.id : !t.sid && ((token && t.token === token) || (code && t.code && uidIn([t.code], code)))));
+    if (same) {
+      beep('dup');
+      const row = document.querySelector(`#af-taps [data-key="${CSS.escape(same.key)}"]`);
+      if (row) { row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash'); }
+      return;
+    }
+    const t = { key: 't' + rid(6), sid: st ? st.id : null, token, code, name: '' };
+    AddTap.list.push(t);
+    beep(st ? 'present' : 'tardy'); buzz(st ? 'present' : 'tardy');
+    announce(st ? `${fullName(st)} listed` : 'New tag. Type their name.');
+    addRefresh(st ? null : t.key);
+    const row = document.querySelector(`#af-taps [data-key="${CSS.escape(t.key)}"]`);
+    if (row) row.scrollIntoView({ block: 'nearest' });
+  }
+  async function addTapListen() {
+    if (!AddTap.open) return;
+    primeAudio();
+    const was = ui.scanning;
+    const ok = await NFC.startScan();
+    if (ok && !was && AddTap.open) AddTap.ownScan = true;
+    addRefresh();
+  }
+  function addTapClose() {
+    // A phone scan started for adding stops with the window. One that was already checking students in keeps going.
+    if (AddTap.ownScan && ui.scanning) NFC.stopScan();
+    AddTap.open = false; AddTap.list = []; AddTap.ownScan = false; AddTap.asNew = false;
+  }
   function openAddStudents(pid) {
     if (!editable()) return;
     const list = periodList();
-    openModal(`${modalHead('Add students', 'Paste names from a spreadsheet or type one per line.')}`
+    openModal(`${modalHead('Add students', 'Paste names from a spreadsheet or type one per line, or have students tap their tags.')}`
       + `<form id="add-form" class="m-body"><label class="field"><span>Names</span><textarea id="af-names" placeholder="Maya Lopez&#10;Nguyen, Kevin&#10;Jordan Brooks, jbrooks.parent@example.com"></textarea>`
       + `<small>One student per line. “First Last” and “Last, First” both work. Add a parent’s email after a name to save it too.</small></label>`
+      + `<div id="af-match"></div>`
+      + `<section class="tapbox" aria-label="Add students by tapping their tags"><div class="tapbox-head">${ic('nfc')}<div><b>Or tap their tags</b>`
+      + `<span>Students in your other classes come with their tag and parent email. A tag from another teacher’s class asks for a name, then works here too.</span></div></div>`
+      + `<div class="tapbox-src" id="af-src">${addTapSrc(pid)}</div><ul class="tap-list" id="af-taps" aria-live="polite" hidden></ul></section>`
       + `<div class="field"><span>Periods</span><div class="checks">${list.map((p) => `<label class="check"><input type="checkbox" name="af-p" value="${esc(p.id)}" ${p.id === pid ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
       + `<p class="m-text small" id="af-err" hidden></p>`
-      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">Add students</button></div></form>`, { label: 'Add students', focus: '#af-names' });
-    $('#add-form').addEventListener('submit', (e) => {
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary" id="af-go">Add students</button></div></form>`,
+      { label: 'Add students', focus: '#af-names', onClose: addTapClose });
+    AddTap.open = true; AddTap.list = []; AddTap.ownScan = false; AddTap.asNew = false;
+    Wedge.collect = (code) => addTapTake({ uid: code });
+    const form = $('#add-form');
+    let typing = null;
+    form.addEventListener('input', (e) => {
+      const t = e.target;
+      if (t.dataset && t.dataset.tapName) { const x = AddTap.list.find((v) => v.key === t.dataset.tapName); if (x) x.name = t.value; addCount(); }
+      if (t.id === 'af-names') { clearTimeout(typing); typing = setTimeout(() => addRefresh(), 160); }
+    });
+    form.addEventListener('change', (e) => {
+      if (e.target.id === 'af-new') { AddTap.asNew = e.target.checked; addRefresh(); }
+      else if (e.target.name === 'af-p') addRefresh();
+    });
+    form.addEventListener('click', (e) => {
+      const x = e.target.closest('[data-tap-x]');
+      if (!x) return;
+      AddTap.list = AddTap.list.filter((t) => t.key !== x.dataset.tapX);
+      addRefresh();
+    });
+    // Enter in a new tag's name field moves on (to the next unnamed tag) instead of submitting the form.
+    form.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || !(e.target.dataset && e.target.dataset.tapName)) return;
       e.preventDefault();
-      const names = parseNames($('#af-names').value);
-      const periods = Array.from(document.querySelectorAll('input[name="af-p"]:checked')).map((i) => i.value);
+      const next = AddTap.list.find((t) => !t.sid && !t.name.trim() && t.key !== e.target.dataset.tapName);
+      if (next) { const f = form.querySelector(`[data-tap-name="${CSS.escape(next.key)}"]`); if (f) f.focus(); } else e.target.blur();
+    });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
       const err = $('#af-err');
-      if (!names.length) { err.textContent = 'Type or paste at least one name.'; err.hidden = false; return; }
-      if (!periods.length) { err.textContent = 'Pick at least one period.'; err.hidden = false; return; }
-      upsertStudents(names.map((n) => ({ id: 's' + rid(9), first: n.first, last: n.last, periods, token: null, uids: [], tagAt: null, parents: n.parents })));
+      const fail = (msg, sel) => { err.textContent = msg; err.hidden = false; const f = sel && form.querySelector(sel); if (f) f.focus(); };
+      const names = parseNames($('#af-names').value);
+      const periods = addPeriods();
+      const taps = AddTap.list.filter((t) => !t.sid || S.students[t.sid]);
+      if (!names.length && !taps.length) { fail('Type or paste at least one name, or have a student tap their tag.'); return; }
+      if (!periods.length) { fail('Pick at least one period.'); return; }
+      const unnamed = taps.find((t) => !t.sid && !parseNames(t.name).length);
+      if (unnamed) { fail('Type a name for each new tag, or remove it from the list.', `[data-tap-name="${CSS.escape(unnamed.key)}"]`); return; }
+      const plan = planAdd(names, taps, periods, !AddTap.asNew);
+      if (plan.records.length) upsertStudents(plan.records);
       closeModal();
-      const bad = names.reduce((sum, n) => sum + n.badEmails, 0);
+      const bad = names.reduce((sum, n) => sum + n.badEmails, 0) + taps.reduce((sum, t) => sum + (t.sid ? 0 : (parseNames(t.name)[0] || { badEmails: 0 }).badEmails), 0);
+      const where = periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ');
+      const parts = [];
+      if (bad) parts.push(`${bad} parent email${bad === 1 ? '' : 's'} couldn’t be read. Add ${bad === 1 ? 'it' : 'them'} in each student’s details.`);
+      else parts.push(where);
+      if (plan.already.length) parts.push(`${namesList(plan.already, 2)} ${plan.already.length === 1 ? 'was' : 'were'} already there.`);
       toast({
-        kind: bad ? 'warn' : 'ok', text: `Added ${names.length} student${names.length === 1 ? '' : 's'}`,
-        sub: bad ? `${bad} parent email${bad === 1 ? '' : 's'} couldn’t be read. Add ${bad === 1 ? 'it' : 'them'} in each student’s details.` : periods.map((id) => S.periods[id]).filter(Boolean).map(periodLabel).join(', ')
+        kind: bad ? 'warn' : (plan.added.length ? 'ok' : 'info'),
+        text: plan.added.length ? `Added ${plural(plan.added.length, 'student')}` : 'No one new to add',
+        sub: parts.join(' · ')
       });
+      scheduleRender();
+    });
+  }
+  // A student from another of your classes tapped in here: add them to this class, then check them in.
+  function addToClassAndCheckIn(sid, pid, scan) {
+    const st = S.students[sid], p = S.periods[pid];
+    if (!st || !p || !editable()) return;
+    if (!st.periods.includes(pid)) upsertStudent({ ...st, periods: [...st.periods, pid] });
+    handleScan({ ...scan, added: true });
+  }
+  // A tag that isn't linked to anyone in your classes: make a new student with it.
+  function openNewTagStudent(scan) {
+    if (!editable()) return;
+    const target = resolveTarget(null);
+    const pid = target.pid || (S.periods[ui.periodId] ? ui.periodId : null);
+    openModal(`${modalHead('New student with this tag', 'Type their name. From now on, this tag checks them in.')}`
+      + `<form id="nt-form" class="m-body"><label class="field"><span>Name</span><input id="nt-name" maxlength="160" autocomplete="off" spellcheck="false" placeholder="Maya Lopez">`
+      + `<small>“First Last” or “Last, First”. Add a parent’s email after a comma to save it too.</small></label>`
+      + `<div class="field"><span>Periods</span><div class="checks">${periodList().map((p) => `<label class="check"><input type="checkbox" name="nt-p" value="${esc(p.id)}" ${p.id === pid ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
+      + `<p class="m-text small" id="nt-err" hidden></p>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="close-modal">Cancel</button><button type="submit" class="btn primary">Add student</button></div></form>`, { label: 'New student', focus: '#nt-name' });
+    $('#nt-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const err = $('#nt-err');
+      const n = parseNames($('#nt-name').value)[0];
+      const periods = Array.from(document.querySelectorAll('#nt-form input[name="nt-p"]:checked')).map((i) => i.value);
+      if (!n) { err.textContent = 'Type their name.'; err.hidden = false; $('#nt-name').focus(); return; }
+      if (!periods.length) { err.textContent = 'Pick at least one period.'; err.hidden = false; return; }
+      const code = scan.uid || scan.serial || null;
+      // Linked to someone meanwhile (on another device): just check them in.
+      if ((scan.token && findByToken(scan.token)) || (code && findByUid(code))) { closeModal(); handleScan(scan); return; }
+      const rec = { id: 's' + rid(9), first: n.first, last: n.last, periods, token: scan.token || null, uids: code ? [code] : [], tagAt: Date.now(), parents: n.parents };
+      upsertStudent(rec);
+      closeModal();
+      const st = S.students[rec.id];
+      const t = resolveTarget(st);
+      if (t.pid && st.periods.includes(t.pid)) handleScan({ ...scan, added: true });
+      else toast({ kind: 'ok', text: `${fullName(st)} added`, sub: periods.map((id) => periodLabel(S.periods[id])).join(', ') });
       scheduleRender();
     });
   }
@@ -2970,7 +3371,8 @@ code.nw { white-space: nowrap; }
           + `<span class="pm-who"><b>${esc(fullName(st))}</b><span>${st.parents.length ? esc(st.parents.join(', ')) : 'No parent email yet'}${mk.s === 'T' ? ` · in at ${esc(fmtClock(mk.t))}` : ''}</span></span>`
           + `<span class="pm-act">${action}</span></li>`;
       }).join('')}</ul>`
-      : `<p class="m-text">No one in ${esc(periodLabel(p))} is absent or tardy ${day === 'Today' ? 'today' : `on ${esc(day)}`}.</p>`;
+      : `<p class="m-text">No one in ${esc(periodLabel(p))} is absent or tardy ${day === 'Today' ? 'today' : `on ${esc(day)}`}. When someone is, they’re listed here with an email to their parent, already written.</p>`
+        + `<p class="m-text small">To write to any student’s parent about something else, open the student and choose <b>Email parent</b>.</p>`;
     const html = `${modalHead('Email parents', `${periodLabel(p)} · ${day}`)}<div class="m-body">`
       + `<p class="m-text small">${auto ? 'TapRoll emails these parents automatically a few minutes after class ends. To send one now from your own account, use its button.' : 'Each button opens an email to that student’s parent, already written. Read it over, then send it from your own account.'}</p>`
       + `<div class="field"><span>Open emails in</span>${viaSeg()}</div>${list}</div>`;
@@ -2979,6 +3381,96 @@ code.nw { white-space: nowrap; }
     openModal(html, { label: 'Email parents', onClose: () => { ui.parentsOpen = false; } });
     ui.parentsOpen = true;
   }
+  /* ----- Email registrar -----
+     Lists the absences and tardies in the open class (or in every class) on the day being viewed, then opens them as
+     an email to the registrar in the teacher's own email. The registrar's address is saved in Settings. */
+  const REG_PILL = { Absent: ['a', 'Absent'], 'Excused absence': ['e', 'Excused'], Tardy: ['t', 'Tardy'], 'Excused tardy': ['p', 'Excused tardy'] };
+  function regState() {
+    const p = ui.view === 'period' ? S.periods[ui.periodId] : null;
+    const scope = p && ui.reg.scope === 'period' ? 'period' : 'day';
+    const date = p ? ui.date : todayStr();
+    const groups = regGroups(date, scope === 'period' ? [p.id] : periodList().map((x) => x.id));
+    return { p, scope, date, groups, msg: registrarMessage(date, groups, scope === 'period') };
+  }
+  function regLink() {
+    const go = $('#reg-go');
+    const input = $('#reg-to');
+    if (!go || !input) return;
+    const { msg } = regState();
+    const to = parseEmails(input.value).ok;
+    const url = composeUrl(to, msg.subject, msg.body);
+    go.setAttribute('href', url);
+    if (prefs.mailVia !== 'app') { go.setAttribute('target', '_blank'); go.setAttribute('rel', 'noopener'); } else { go.removeAttribute('target'); go.removeAttribute('rel'); }
+    const long = $('#reg-long');
+    if (long) long.hidden = !(prefs.mailVia === 'app' && url.length > 1900);
+  }
+  function openRegistrar(scope, refresh) {
+    if (!refresh) ui.reg = { scope: scope || 'period', to: S.settings.registrar || '', sentAt: 0 };
+    const { p, scope: sc, date, groups, msg } = regState();
+    const day = date === todayStr() ? 'Today' : fmtDateShort(date);
+    const rows = [];
+    let unmarked = 0;
+    const gaps = [];
+    for (const g of groups) {
+      if (sc === 'day') rows.push(`<li class="reg-head"><b>${esc(classText(g.p))}</b>${g.marked ? '' : '<span>Attendance not taken</span>'}</li>`);
+      if (!g.marked) { if (sc === 'period') rows.push(`<li class="reg-none">No one is marked yet${day === 'Today' ? ' today' : ''}.</li>`); continue; }
+      let any = false;
+      for (const [label, list, detail] of regSections(g)) {
+        for (const x of list) {
+          any = true;
+          const [cls, short] = REG_PILL[label];
+          const more = detail(x);
+          rows.push(`<li class="reg-row"><span class="pill ${cls}">${esc(short)}</span><span class="pm-who"><b>${esc(fullName(x.st))}</b>${more ? `<span>${esc(more)}</span>` : ''}</span></li>`);
+        }
+      }
+      if (!any) rows.push('<li class="reg-none">No absences or tardies.</li>');
+      if (g.U.length) { unmarked += g.U.length; gaps.push(`${periodLabel(g.p)} (${g.U.length})`); rows.push(`<li class="reg-none">Not marked: ${esc(namesList(g.U.map((x) => x.st), 6))}</li>`); }
+    }
+    if (!groups.length) rows.push(`<li class="reg-none">${sc === 'period' ? 'No students in this class yet.' : 'No students in your classes yet.'}</li>`);
+    const canMark = editable() && sc === 'period' && unmarked && date === ui.date;
+    const sent = ui.reg.sentAt ? `<p class="m-text small sent-line" id="reg-sent">${ic('check')}Email opened at ${esc(fmtClock(ui.reg.sentAt))}. If nothing opened, choose Copy and paste it into an email.</p>` : '';
+    const html = `${modalHead('Email the registrar', `${sc === 'period' ? periodLabel(p) : 'All your classes'} · ${day}`)}<div class="m-body">`
+      + (p ? `<div class="field"><span>Include</span><div class="seg" role="radiogroup" aria-label="Include">`
+        + `<button type="button" role="radio" aria-checked="${sc === 'period'}" data-act="reg-scope" data-v="period">${esc(periodLabel(p))}</button>`
+        + `<button type="button" role="radio" aria-checked="${sc === 'day'}" data-act="reg-scope" data-v="day">All your classes</button></div></div>` : '')
+      + `<label class="field"><span>Registrar’s email</span><input id="reg-to" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="300" placeholder="registrar@yourschool.org" value="${esc(ui.reg.to)}">`
+      + `<small>Or your attendance office. Saved for next time. Separate two addresses with a comma.</small></label>`
+      + `<div class="field"><span>The email</span><div class="reg-box"><p class="reg-subj"><b>Subject:</b> ${esc(msg.subject)}</p><ul class="reg-list">${rows.join('')}</ul></div></div>`
+      + (unmarked ? `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p>${plural(unmarked, 'student')} ${unmarked === 1 ? 'isn’t' : 'aren’t'} marked yet${sc === 'day' ? ` (${esc(gaps.join(', '))})` : ''}. The email lists them as not marked.</p>`
+        + (canMark ? `<div class="row"><button type="button" class="btn sm" data-act="reg-mark-rest">Mark ${unmarked} not-yet absent</button></div>` : '') + '</div></div>' : '')
+      + `<div class="field"><span>Open emails in</span>${viaSeg()}</div>`
+      + `<p class="m-text small" id="reg-long" hidden>This list is long, and some email apps cut long emails off. If yours does, choose Copy and paste it in.</p>`
+      + `<p class="m-text small" id="reg-err" hidden></p>${sent}</div>`
+      + `<div class="m-foot"><button type="button" class="btn" data-act="reg-copy">${ic('copy')} Copy</button><a class="btn primary" id="reg-go" href="#" data-act="reg-go">${ic('mail')} Open email</a></div>`
+      + `<pre class="sr-only" id="reg-text">${esc(`Subject: ${msg.subject}\n\n${msg.body.replace(/\r\n/g, '\n')}`)}</pre>`;
+    const box = $('#modal-root .modal');
+    if (refresh && ui.regOpen && box) {
+      const keep = document.activeElement && document.activeElement.id === 'reg-to' ? { s: document.activeElement.selectionStart, e: document.activeElement.selectionEnd } : null;
+      box.innerHTML = html;
+      if (keep) { const f = $('#reg-to'); f.focus(); try { f.setSelectionRange(keep.s, keep.e); } catch (e) { /* not text */ } }
+    } else {
+      openModal(html, { label: 'Email the registrar', onClose: () => { ui.regOpen = false; } });
+      ui.regOpen = true;
+    }
+    regLink();
+    $('#reg-to').addEventListener('input', (e) => { ui.reg.to = e.target.value; $('#reg-err').hidden = true; regLink(); });
+  }
+  // Checks the registrar's address before the email opens, and saves it for next time.
+  function regReady() {
+    const input = $('#reg-to');
+    const err = $('#reg-err');
+    const em = parseEmails(input.value);
+    if (!em.ok.length || em.bad.length) {
+      err.textContent = em.bad.length ? `“${em.bad[0]}” doesn’t look like an email address. Use one like registrar@yourschool.org.` : 'Type the registrar’s email first.';
+      err.hidden = false;
+      input.focus();
+      return false;
+    }
+    const saved = em.ok.join(', ');
+    if (editable() && saved !== (S.settings.registrar || '')) setSettings({ registrar: saved });
+    return true;
+  }
+
   // Records that a parent email was opened for this mark, after the click has opened it.
   function markEmailed(sid, date, pid) {
     const mk = marksOf(date, pid)[sid];
@@ -3049,7 +3541,8 @@ code.nw { white-space: nowrap; }
       + `${can ? `<section class="dsec"><h3>Details</h3><form id="stu-form" class="m-body"><div class="grid2"><label class="field"><span>First name</span><input id="sf-first" maxlength="40" value="${esc(st.first)}"></label>`
         + `<label class="field"><span>Last name</span><input id="sf-last" maxlength="40" value="${esc(st.last)}"></label></div>`
         + `<label class="field"><span>Parent or guardian email <em>optional</em></span><input id="sf-parents" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="300" placeholder="parent@example.com" value="${esc(st.parents.join(', '))}">`
-        + `<small>Used to email a parent when ${esc(st.first || 'this student')} is absent or tardy. Separate two addresses with a comma.</small></label>`
+        + `<small>TapRoll writes to this address when ${esc(st.first || 'this student')} is absent or tardy. Separate two addresses with a comma.</small></label>`
+        + (st.parents.length ? `<div class="row">${mailAnchor(st.parents, parentNote(st), 'Email parent', `data-act="email-note" data-id="${esc(st.id)}"`)}<span class="m-text small">Write to them about anything, in your own email.</span></div>` : '')
         + `<div class="field"><span>Periods</span><div class="checks">${periodList().map((p) => `<label class="check"><input type="checkbox" name="sp" value="${esc(p.id)}" ${st.periods.includes(p.id) ? 'checked' : ''}> P${esc(p.num)} · ${esc(p.course)}</label>`).join('')}</div></div>`
         + `<p class="m-text small" id="sf-err" hidden></p>`
         + `<div class="m-foot"><button type="button" class="btn danger spacer" data-act="delete-student" data-id="${esc(st.id)}">${ic('trash')} Remove student</button><button type="submit" class="btn primary">Save</button></div></form></section>` : ''}`;
@@ -3372,6 +3865,8 @@ code.nw { white-space: nowrap; }
       + `<section class="dsec"><h3>Classroom</h3><form id="settings-form" class="m-body"><div class="grid2">`
       + `<label class="field"><span>Your name</span><input id="set-teacher" maxlength="60" autocomplete="name" value="${esc(S.settings.teacher)}" placeholder="Ms. Rivera" ${can ? '' : 'disabled'}></label>`
       + `<label class="field"><span>School</span><input id="set-school" maxlength="60" autocomplete="organization" value="${esc(S.settings.school)}" placeholder="Harbor View High" ${can && !(School.state === 'member' && Session.kind === 'cloud') ? '' : 'disabled'}>${School.state === 'member' && Session.kind === 'cloud' ? `<small>Set by ${esc(School.name || 'your school')}.</small>` : ''}</label></div>`
+      + `<label class="field"><span>Registrar’s email <em>optional</em></span><input id="set-registrar" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="300" value="${esc(S.settings.registrar || '')}" placeholder="registrar@yourschool.org" ${can ? '' : 'disabled'}>`
+      + `<small>Where <b>Email registrar</b> sends your absences and tardies. Your attendance office works too.</small></label>`
       + `<p class="m-text small">Passing time and tardy grace are set for each period. To change them, open a period and select the pencil button next to its name.</p>`
       + `<label class="field"><span>Hosted site link</span><input id="set-base" type="url" inputmode="url" placeholder="${esc(auto || 'https://yourname.github.io/taproll/')}" value="${esc(S.settings.tagBase)}" ${can ? '' : 'disabled'}>`
       + `<small>Tags you write open this address when tapped on a phone. ${auto ? 'Leave it blank to use this page’s address.' : 'Leave it blank to write plain tag codes.'}</small></label>`
@@ -3398,9 +3893,11 @@ code.nw { white-space: nowrap; }
         const base = $('#set-base').value.trim();
         const err = $('#set-err');
         if (base && !/^https:\/\/\S+$/i.test(base)) { err.textContent = 'The hosted site link has to start with https://'; err.hidden = false; return; }
+        const reg = parseEmails($('#set-registrar').value);
+        if (reg.bad.length) { err.textContent = `“${reg.bad[0]}” doesn’t look like an email address. Use one like registrar@yourschool.org.`; err.hidden = false; $('#set-registrar').focus(); return; }
         const teacher = $('#set-teacher').value.trim();
         const school = School.state === 'member' && Session.kind === 'cloud' && School.name ? School.name : $('#set-school').value.trim();
-        setSettings({ school, teacher, tagBase: base });
+        setSettings({ school, teacher, tagBase: base, registrar: reg.ok.join(', ') });
         if (School.kind === 'demo' && school) School.name = school;
         saveAccountProfile(teacher, school);
       }
@@ -3507,7 +4004,8 @@ code.nw { white-space: nowrap; }
   }
   function loadDemo() {
     if (Session.kind === 'demo') { resetDemoData(Math.floor(Math.random() * 1e9)); toast({ kind: 'ok', text: 'Example data reset', sub: 'A new set of made-up students.' }); return; }
-    const demo = normalizeState(window.TapRollDemo.generate({ now: new Date(), seed: Math.floor(Math.random() * 1e9) }));
+    // Made-up parent emails only where nothing is sent automatically (a cloud account may have automatic emails on).
+    const demo = normalizeState(window.TapRollDemo.generate({ now: new Date(), seed: Math.floor(Math.random() * 1e9), parents: Session.kind !== 'cloud' }));
     replaceAll(demo, true);
     toast({ kind: 'ok', text: 'Example data loaded', sub: 'Names and numbers are made up.' });
   }
@@ -3562,7 +4060,26 @@ code.nw { white-space: nowrap; }
         prefs.mailVia = el.dataset.v; savePrefs();
         el.parentElement.querySelectorAll('[data-act="mail-via"]').forEach((b) => b.setAttribute('aria-checked', String(b === el)));
         if (ui.parentsOpen) openParentEmails(true);
+        if (ui.regOpen) regLink();
         break;
+      // A general email to a parent, from the student's details: the link opens it, and there's nothing to record.
+      case 'email-note': break;
+      case 'email-registrar': openRegistrar(el.dataset.scope || 'period'); break;
+      case 'reg-scope': ui.reg.scope = el.dataset.v; openRegistrar(null, true); break;
+      case 'reg-mark-rest': markRestAbsent(); openRegistrar(null, true); break;
+      case 'reg-go':
+        if (!regReady()) { e.preventDefault(); break; }
+        ui.reg.sentAt = Date.now();
+        // After the link has opened the email, show when it was opened.
+        setTimeout(() => { if (ui.regOpen) openRegistrar(null, true); }, 80);
+        break;
+      case 'reg-copy': {
+        const em = parseEmails(($('#reg-to') || {}).value || '');
+        if (em.ok.length && !em.bad.length && editable() && em.ok.join(', ') !== (S.settings.registrar || '')) setSettings({ registrar: em.ok.join(', ') });
+        copyFrom('reg-text');
+        break;
+      }
+      case 'add-tap-listen': addTapListen(); break;
       case 'add-parent-email':
         openStudent(id);
         setTimeout(() => { const f = $('#sf-parents'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus({ preventScroll: true }); } }, 80);
@@ -6085,7 +6602,7 @@ code.nw { white-space: nowrap; }
     if (ui.screen !== 'auth' || authUI.view === 'loading') showAuth('signin');
   }
   function makeDemoState(seed) {
-    const st = normalizeState(window.TapRollDemo.generate({ now: new Date(), seed }));
+    const st = normalizeState(window.TapRollDemo.generate({ now: new Date(), seed, parents: true }));
     st.settings.sample = true;
     st.settings.sampleDate = todayStr();
     return st;
