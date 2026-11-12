@@ -1,4 +1,5 @@
 // TapRoll automatic parent emails: a Cloudflare Worker.
+// Version: November 12, 2026. Reports its days and hours, so TapRoll can tell teachers when emails go out.
 //
 // A few minutes after each class ends, this emails the parents of students marked absent or tardy, once per
 // student, class and day. Excused tardies aren't emailed. A tardy that a late pass covers is excused instead.
@@ -66,6 +67,11 @@ async function run(env, now = Date.now()) {
   };
   report.schools = open ? ['*', ...listed] : listed;
   report.delay = cfg.delay;
+  // So TapRoll can tell teachers when emails go out: days (0 = Sunday), hours and time zone, and how long after class.
+  report.days = cfg.days;
+  report.hours = cfg.hours;
+  report.tz = cfg.tz;
+  report.maxAge = MAX_AGE;
   report.from = String(env.MAIL_FROM || '');
   let fs = null;
   try {
@@ -237,8 +243,8 @@ async function run(env, now = Date.now()) {
 
 async function finish(fs, report) {
   if (fs) {
-    const { lastRun, ok, sent, error, from, schools, delay } = report;
-    try { await fs.write([{ path: 'site/mail', merge: true, data: { lastRun, ok, sent, error, from, schools, delay } }]); }
+    const { lastRun, ok, sent, error, from, schools, delay, days, hours, tz, maxAge } = report;
+    try { await fs.write([{ path: 'site/mail', merge: true, data: { lastRun, ok, sent, error, from, schools, delay, days, hours, tz, maxAge } }]); }
     catch (e) { report.ok = false; report.error = report.error || clip(`Couldn’t record the run: ${e.message}`, 300); }
   }
   return report;
