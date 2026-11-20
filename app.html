@@ -871,6 +871,7 @@ a.ab-logo { align-self: flex-start; color: inherit; text-decoration: none; borde
 .pw-toggle:hover { color: var(--ink); background: var(--surface-2); }
 .btn.block { width: 100%; min-height: 46px; font-size: 15px; border-radius: 10px; }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+a.linkbtn { text-decoration: none; }
 .linkbtn:hover { text-decoration: underline; }
 .af-switch { margin: 2px 0 0; text-align: center; font-size: 14px; color: var(--ink-2); }
 .af-switch .linkbtn { font-size: 14px; }
@@ -2542,7 +2543,8 @@ code.nw { white-space: nowrap; }
         maybeOpenOffice();
         setTimeout(() => {
           applyPasses();
-          if (pendingTag) processPendingHash();
+          if (pendingUsage) applyUsageLink();
+          else if (pendingTag) processPendingHash();
           else if (Session.office && School.state === 'none' && !modal.open) { Session.office = false; openOfficeStart(); }
           else if (pendingSchoolLink) applySchoolLink();
           else maybeOfferImport();
@@ -4306,7 +4308,7 @@ code.nw { white-space: nowrap; }
         + `<button class="btn" data-act="load-demo">${ic('spark')} ${demo ? 'Reset example data' : 'Load example data'}</button>`
         + `${demo ? '' : `<button class="btn danger" data-act="start-fresh">${ic('trash')} Start fresh</button>`}</div>` : ''}`
       + `${Session.kind === 'device' ? `<p class="m-text small">Want to sign in from any device? <button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button></p>` : ''}`
-      + `${Session.kind === 'cloud' ? `<p class="m-text small">Run this TapRoll site? <button type="button" class="linkbtn" data-act="setup-guide">Setup guide and Firestore rules</button> · <button type="button" class="linkbtn" data-act="mail-guide">Automatic parent emails</button></p>` : ''}`
+      + `${Session.kind === 'cloud' ? `<p class="m-text small">Run this TapRoll site? <button type="button" class="linkbtn" data-act="setup-guide">Setup guide and Firestore rules</button> · <button type="button" class="linkbtn" data-act="mail-guide">Automatic parent emails</button> · <a class="linkbtn" href="usage.html">Usage</a></p>` : ''}`
       + `</section>`
       + `<nav class="set-legal" aria-label="Policies">${legalLinks(true)}</nav>`, { label: 'Settings' });
     $('#settings-form').addEventListener('submit', (e) => {
@@ -4585,12 +4587,15 @@ code.nw { white-space: nowrap; }
   let pendingAuthView = null;
   // School invites link to app.html#school: after sign-in, it opens the School office or the invite.
   let pendingSchoolLink = false;
+  // The usage page (usage.html) signs people in with app.html#usage: after a cloud sign-in, TapRoll goes back there.
+  let pendingUsage = false;
   function readHashTag() { const m = /^#tag-([a-z0-9]{6,40})$/i.exec(location.hash || ''); return m ? m[1].toLowerCase() : null; }
   function clearHash() { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* not allowed here */ } }
   function captureHash() {
     const t = readHashTag();
     if (t) { pendingTag = t; clearHash(); return; }
     if (/^#school$/i.test(location.hash || '')) { pendingSchoolLink = true; clearHash(); return; }
+    if (/^#usage$/i.test(location.hash || '') && !ui.kioskWin) { pendingUsage = true; clearHash(); return; }
     const v = /^#(signin|signup|example)$/i.exec(location.hash || '');
     if (v) { pendingAuthView = v[1].toLowerCase(); clearHash(); }
   }
@@ -4599,6 +4604,12 @@ code.nw { white-space: nowrap; }
     if (!pendingSchoolLink || ui.screen !== 'app' || !ui.ready) return;
     if (isStaff()) { pendingSchoolLink = false; openSchoolView(); return; }
     if (School.kind === 'cloud' && School.state !== 'loading') { pendingSchoolLink = false; openSchoolPanel(); }
+  }
+  // Signed in with a cloud account: back to the usage page. Other accounts can't open it, so they just stay here.
+  function applyUsageLink() {
+    if (!pendingUsage || ui.screen !== 'app' || !ui.ready) return;
+    pendingUsage = false;
+    if (Session.kind === 'cloud') location.assign('usage.html');
   }
   // A home page link followed while this page is already open on the sign-in screen.
   function applyAuthLink() {
@@ -4649,7 +4660,7 @@ code.nw { white-space: nowrap; }
     window.addEventListener('pagehide', () => Store.flushLocal());
     window.addEventListener('hashchange', () => {
       captureHash();
-      if (ui.screen === 'auth') { if (pendingAuthView) applyAuthLink(); else renderAuth(); } else { pendingAuthView = null; processPendingHash(); applySchoolLink(); }
+      if (ui.screen === 'auth') { if (pendingAuthView) applyAuthLink(); else renderAuth(); } else { pendingAuthView = null; processPendingHash(); applySchoolLink(); applyUsageLink(); }
     });
     window.addEventListener('online', setSyncState);
     window.addEventListener('offline', setSyncState);
@@ -7866,6 +7877,12 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/schools/$(sid)/members/$(uid));
     }
     function staffOverWs(uid, ws) { return staffOver(uid) && profile(uid).get('ws', '') == ws; }
+    // The people who run this TapRoll site, for its usage page (usage.html): each has a document
+    // in owners/ named with their account ID. Only the Firebase console can add one. Owners can
+    // read accounts, classes and schools to count them, but can't change anything.
+    function isSiteOwner() {
+      return signedIn() && exists(/databases/$(database)/documents/owners/$(request.auth.uid));
+    }
     // Joining uses up the invite: the school's own copy names the role, and the
     // same batch that adds the member must delete it.
     function invitedTo(sid, role) {
@@ -7895,9 +7912,11 @@ service cloud.firestore {
     }
     match /teachers/{uid} {
       allow read: if signedIn() && staffOver(uid);
+      allow list: if isSiteOwner();
     }
     match /teachers/{uid}/ws/{ws}/{document=**} {
       allow read: if signedIn() && staffOverWs(uid, ws);
+      allow list: if isSiteOwner();
     }
     match /teachers/{uid}/ws/{ws}/meta/roster {
       allow create, update: if signedIn() && staffOverWs(uid, ws);
@@ -7906,6 +7925,7 @@ service cloud.firestore {
     // Whoever sets up a school owns it and is its first admin.
     match /schools/{sid} {
       allow read: if isMember(sid);
+      allow list: if isSiteOwner();
       allow create: if signedIn() && request.resource.data.owner == me() && validName(request.resource.data)
         && request.resource.data.keys().hasOnly(['name', 'owner', 'createdAt']);
       allow update: if isAdmin(sid) && request.resource.data.owner == resource.data.owner
@@ -7914,6 +7934,7 @@ service cloud.firestore {
     match /schools/{sid}/members/{uid} {
       // Admins and registrars see who's in the school. Everyone sees their own membership.
       allow read: if isStaff(sid) || (signedIn() && uid == me());
+      allow list: if isSiteOwner();
       // Joining: the owner adds themselves as admin. Anyone else accepts an invite
       // sent to their confirmed email, with the role it names.
       allow create: if signedIn() && uid == me() && memberFields(request.resource.data)
@@ -7934,6 +7955,7 @@ service cloud.firestore {
     // Pending invites. The school's own list is what lets someone join...
     match /schools/{sid}/invites/{email} {
       allow read: if isStaff(sid);
+      allow list: if isSiteOwner();
       allow create, update: if canInvite(sid, request.resource.data) && canTouchInvite(sid, resource)
         && request.resource.data.email == email
         && request.resource.data.keys().hasOnly(['email', 'role', 'byName', 'byEmail', 'at']);
@@ -7986,6 +8008,10 @@ service cloud.firestore {
     match /site/{doc} {
       allow read: if signedIn();
     }
+    // The usage page asks whether you're one of the site's owners (see isSiteOwner).
+    match /owners/{uid} {
+      allow get: if signedIn() && me() == uid;
+    }
   }
 }`;
   function cloudStatus() {
@@ -8009,11 +8035,11 @@ service cloud.firestore {
       + setupStep('Turn on sign-in', 'Open <b>Authentication</b>, click <b>Get started</b>, then enable <b>Email/Password</b> and <b>Google</b>.')
       + setupStep('Allow your site', `In Authentication, open <b>Settings › Authorized domains</b> and add <code>${esc(host)}</code>.`)
       + setupStep('Create the database', 'Open <b>Firestore Database</b>, click <b>Create database</b>, keep the defaults, and start in <b>production mode</b>.')
-      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before November 12, 2026 (when schools started finding students by their tags), paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
+      + setupStep('Paste these rules', `In Firestore, open the <b>Rules</b> tab, replace everything with these rules, and click <b>Publish</b>. Each teacher reads and writes only their own classes, and a school’s admins and registrars can see the classes of teachers who join their school. If you set up TapRoll before November 20, 2026 (when the usage page arrived), paste these again.${codeBlock('rules-code', FIRESTORE_RULES)}`)
       + setupStep('Fill in config.js', 'Copy the <code>const firebaseConfig = { … };</code> block from step 2 and paste it into <code>config.js</code> in place of everything there. Upload <code>config.js</code> to the same folder as <code>app.html</code>. You can find the block again later under <b>Project settings › General › Your apps</b>.')
       + setupStep('Reload TapRoll', 'GitHub can take a few minutes to update. Then the sign-in page shows <b>Continue with Google</b>, and classes sync across devices.')
       + `</ol><p class="m-text small">Accounts made on a device before the switch stay on that device. To move classes over, download a backup in Settings, sign in with your new account, and restore it.</p>`
-      + `<p class="m-text small">Next, if you like: <button type="button" class="linkbtn" data-act="mail-guide">Set up automatic parent emails</button></p></div>`,
+      + `<p class="m-text small">Next, if you like: <button type="button" class="linkbtn" data-act="mail-guide">Set up automatic parent emails</button>, or open the <a class="linkbtn" href="usage.html">usage page</a> to see how many schools, teachers and students use TapRoll (it shows how to make yourself an owner).</p></div>`,
     { cls: 'wide', label: 'Set up cloud sign-in' });
   }
 
