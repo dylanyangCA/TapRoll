@@ -695,10 +695,11 @@ details.tv table { margin-top: 8px; }
     root.innerHTML = stateHtml();
   }
   const stateCard = (icon, title, body) => `<section class="card state"><div class="state-ic">${ic(icon)}</div><h1>${esc(title)}</h1>${body}</section>`;
-  function ownerSteps(withRules) {
+  // Shown only while the rules are older than the usage page, which is how the site's owner first sets it up.
+  function ownerSteps() {
     const uid = S.user ? S.user.uid : '';
     return `<ol class="steps">`
-      + (withRules ? `<li><div><b>Paste the latest Firestore rules.</b> In TapRoll, open <b>Settings</b>. Under <b>Data</b>, choose <b>Setup guide and Firestore rules</b>, copy the rules in step 6, paste them in Firebase under <b>Firestore Database › Rules</b>, and click <b>Publish</b>.</div></li>` : '')
+      + `<li><div><b>Paste the latest Firestore rules.</b> In TapRoll, open <b>Settings</b>. Under <b>Data</b>, choose <b>Setup guide and Firestore rules</b>, copy the rules in step 6, paste them in Firebase under <b>Firestore Database › Rules</b>, and click <b>Publish</b>.</div></li>`
       + `<li><div>Open <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>, choose your TapRoll project, then <b>Firestore Database › Data</b>.</div></li>`
       + `<li><div>Click <b>Start collection</b> and name it <code>owners</code>. If <code>owners</code> is already there, open it and click <b>Add document</b>.</div></li>`
       + `<li><div>For the <b>Document ID</b>, paste your TapRoll account ID:<div class="idbox"><code id="uid-code">${esc(uid)}</code><button type="button" class="btn sm" data-act="copy-uid">${ic('copy')} Copy</button></div></div></li>`
@@ -717,9 +718,11 @@ details.tv table { margin-top: 8px; }
       case 'signedout':
         return stateCard('users', 'Sign in to see usage', '<p>This page counts the schools, teachers and students using this TapRoll site. It’s for the people who run it.</p><div class="row"><a class="btn primary" href="app.html#usage">Sign in to TapRoll</a></div><p class="small">After you sign in, TapRoll brings you back here.</p>');
       case 'notowner':
-        return stateCard('key', 'Only the people who run this TapRoll site can see usage', `<p>${who} If you run this site, make yourself an owner in Firebase:</p>${ownerSteps(false)}<p class="small">Owners are added only in the Firebase console, so no one can make themselves an owner from TapRoll. Owners can read accounts and classes to count them, but can’t change them.</p>`);
+        // Owners are added in the Firebase console (Firestore › Data › owners, with the account ID from
+        // Authentication › Users), so this card doesn't explain how.
+        return stateCard('key', 'This page is only for the people who run TapRoll', `<p>${who} This account can’t see usage.</p><div class="row"><a class="btn primary" href="app.html">Open TapRoll</a></div>`);
       case 'rules':
-        return stateCard('key', 'Two steps in Firebase first', `<p>${who} Your Firestore rules don’t have the usage page yet. To open it:</p>${ownerSteps(true)}<p class="small">Owners are added only in the Firebase console, so no one can make themselves an owner from TapRoll.</p>`);
+        return stateCard('key', 'Two steps in Firebase first', `<p>${who} Your Firestore rules don’t have the usage page yet. To open it:</p>${ownerSteps()}<p class="small">Owners are added only in the Firebase console, so no one can make themselves an owner from TapRoll.</p>`);
       case 'error':
         return stateCard('alert', 'Couldn’t load usage', `<p>${esc(S.err || 'Something went wrong.')}</p><div class="row"><button type="button" class="btn primary" data-act="recheck">Try again</button></div>`);
       case 'checking':

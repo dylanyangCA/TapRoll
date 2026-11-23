@@ -2680,7 +2680,7 @@ code.nw { white-space: nowrap; }
   function banners() {
     let out = '';
     if (ui.syncError === 'permission-denied') {
-      out += `<div class="banner warn">${ic('alert')}<p><b>TapRoll can’t open your saved classes.</b> The Firestore rules are blocking this account. Paste the rules from the setup guide into Firebase, then reload.</p><button class="btn sm" data-act="setup-guide">Setup guide</button></div>`;
+      out += `<div class="banner warn">${ic('alert')}<p><b>TapRoll can’t open your saved classes.</b> ${siteOwner() ? 'The Firestore rules are blocking this account. Paste the rules from the setup guide into Firebase, then reload.' : esc(rulesFix())}</p>${rulesFixBtn()}</div>`;
     } else if (ui.syncError) {
       out += `<div class="banner warn">${ic('alert')}<p><b>Live sync stopped.</b> Check your connection, then reload the page.</p><button class="btn sm" data-act="reload">Reload</button></div>`;
     } else if (ui.readOnly) out += `<div class="banner warn">${ic('alert')}<p>You can view these classes, but changes aren’t being saved.</p></div>`;
@@ -4282,6 +4282,7 @@ code.nw { white-space: nowrap; }
   }
   function openSettings() {
     loadMail(false, 60000);
+    checkSiteOwner();
     const auto = autoBase();
     const can = editable();
     const demo = Session.kind === 'demo';
@@ -4308,7 +4309,7 @@ code.nw { white-space: nowrap; }
         + `<button class="btn" data-act="load-demo">${ic('spark')} ${demo ? 'Reset example data' : 'Load example data'}</button>`
         + `${demo ? '' : `<button class="btn danger" data-act="start-fresh">${ic('trash')} Start fresh</button>`}</div>` : ''}`
       + `${Session.kind === 'device' ? `<p class="m-text small">Want to sign in from any device? <button type="button" class="linkbtn" data-act="setup-guide">Set up cloud sign-in</button></p>` : ''}`
-      + `${Session.kind === 'cloud' ? `<p class="m-text small">Run this TapRoll site? <button type="button" class="linkbtn" data-act="setup-guide">Setup guide and Firestore rules</button> · <button type="button" class="linkbtn" data-act="mail-guide">Automatic parent emails</button> · <a class="linkbtn" href="usage.html">Usage</a></p>` : ''}`
+      + `${Session.kind === 'cloud' ? `<p class="m-text small" id="owner-links"${siteOwner() ? '' : ' hidden'}>${siteOwner() ? ownerLinksInner() : ''}</p>` : ''}`
       + `</section>`
       + `<nav class="set-legal" aria-label="Policies">${legalLinks(true)}</nav>`, { label: 'Settings' });
     $('#settings-form').addEventListener('submit', (e) => {
@@ -5349,7 +5350,7 @@ code.nw { white-space: nowrap; }
   const dref = (p) => Cloud.fs.doc(p);
   function schoolErrText(err, what) {
     const code = String((err && err.code) || '');
-    if (code.includes('permission-denied')) return `Firestore didn’t allow ${what}. If you run this TapRoll site, paste the latest rules from the setup guide into Firebase.`;
+    if (code.includes('permission-denied')) return `Firestore didn’t allow ${what}. ${rulesFix()}`;
     if (code.includes('unavailable') || code.includes('network')) return 'Can’t reach TapRoll right now. Check your connection and try again.';
     return `Couldn’t finish ${what}. Try again.`;
   }
@@ -5511,7 +5512,7 @@ code.nw { white-space: nowrap; }
         + `<button class="btn sm primary" data-act="demo-signup">Create your account</button><button class="btn sm ghost" data-act="hide-sample">Keep exploring</button></div>`;
     }
     if (School.error && School.error.includes('permission-denied')) {
-      out += `<div class="banner warn">${ic('alert')}<p><b>Some school data is blocked.</b> If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.</p><button class="btn sm" data-act="setup-guide">Setup guide</button></div>`;
+      out += `<div class="banner warn">${ic('alert')}<p><b>Some school data is blocked.</b> ${esc(rulesFix())}</p>${rulesFixBtn()}</div>`;
     }
     return out;
   }
@@ -5961,7 +5962,7 @@ code.nw { white-space: nowrap; }
         try { await inviteOne(email, role); ok.push({ email, role }); }
         catch (ex) {
           const denied = String((ex && ex.code) || '').includes('permission-denied');
-          skipped.push({ email, why: denied ? (School.invites[email] && School.invites[email].role !== 'teacher' && !isAdmin() ? 'an admin sent this invite, so only an admin can change it' : 'Firestore didn’t allow the invite. If you run this TapRoll site, paste the latest rules from the setup guide into Firebase.') : 'couldn’t send the invite. Try again.' });
+          skipped.push({ email, why: denied ? (School.invites[email] && School.invites[email].role !== 'teacher' && !isAdmin() ? 'an admin sent this invite, so only an admin can change it' : `Firestore didn’t allow the invite. ${rulesFix()}`) : 'couldn’t send the invite. Try again.' });
         }
       }
       schoolChanged();
@@ -6008,7 +6009,7 @@ code.nw { white-space: nowrap; }
     }
     if (School.state === 'loading') return '<p class="m-text small">Checking your school…</p>';
     if (School.state === 'error') {
-      return `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p>TapRoll couldn’t open your school. If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.</p><div class="row"><button type="button" class="btn sm" data-act="setup-guide">Setup guide</button></div></div></div>`;
+      return `<div class="opstatus warn">${ic('alert')}<div class="op-body"><p>TapRoll couldn’t open your school. ${esc(rulesFix())}</p>${siteOwner() ? '<div class="row"><button type="button" class="btn sm" data-act="setup-guide">Setup guide</button></div>' : ''}</div></div>`;
     }
     if (School.state === 'member') {
       const staff = isStaffRole(School.role), owner = School.owner === meUid();
@@ -6032,7 +6033,7 @@ code.nw { white-space: nowrap; }
     } else if (School.inviteState === 'unverified') {
       out += verifyBlock('Then any invite from your school shows up here.');
     } else if (School.inviteState === 'denied' || School.inviteState === 'error') {
-      out += `<p class="m-text small">TapRoll couldn’t check for school invites. If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.</p>`;
+      out += `<p class="m-text small">TapRoll couldn’t check for school invites. ${School.inviteState === 'denied' ? esc(rulesFix()) : 'Check your connection, then open Settings again.'}</p>`;
     } else if (School.inviteState === 'checking') out += '<p class="m-text small">Checking for invites…</p>';
     else out += `<p class="m-text small">You’re not part of a school. When your school’s admin or registrar invites <b>${esc(School.me ? School.me.email : '')}</b>, the invite shows up here.</p>`;
     out += `<p class="m-text small sc-setup">Run a school office? <button type="button" class="linkbtn" data-act="sc-create">Set up your school</button></p>`;
@@ -6074,7 +6075,7 @@ code.nw { white-space: nowrap; }
         pendingSchoolLink = false;
         go.disabled = false; go.textContent = 'Set up school';
         err.innerHTML = esc(schoolErrText(ex, 'setting up the school'))
-          + (String((ex && ex.code) || '').includes('permission-denied') ? ' <button type="button" class="linkbtn" data-act="setup-guide">Open the setup guide</button>' : '');
+          + (String((ex && ex.code) || '').includes('permission-denied') && siteOwner() ? ' <button type="button" class="linkbtn" data-act="setup-guide">Open the setup guide</button>' : '');
         err.hidden = false;
       }
     });
@@ -6815,6 +6816,43 @@ code.nw { white-space: nowrap; }
     Cloud.fs.doc('site/mail').get().then((snap) => done('done', snap.exists ? (snap.data() || {}) : null),
       (e) => done(String((e && e.code) || '') === 'permission-denied' ? 'blocked' : 'error', null));
   }
+  /* ----- The people who run this TapRoll site -----
+     Accounts with a document at owners/<uid> (only the Firebase console adds one; see isSiteOwner in the rules).
+     Help for running the site (the setup guide, the automatic email guide, the usage page, and notes about the
+     rules and the email sender) shows only to them; everyone else is told to email support. state: '' (not
+     checked yet, or the check failed and is tried again when Settings opens), yes, no, or old (rules from before
+     November 20, 2026 refuse the check, so everyone sees the help, as before, and the owner can paste the
+     current rules). */
+  const SiteOwner = { uid: '', state: '', busy: false };
+  function checkSiteOwner() {
+    if (Session.kind !== 'cloud' || !Cloud.fs || !Session.user) return;
+    const uid = Session.user.id;
+    if (SiteOwner.uid !== uid) { SiteOwner.uid = uid; SiteOwner.state = ''; SiteOwner.busy = false; }
+    if (SiteOwner.busy || SiteOwner.state) return;
+    SiteOwner.busy = true;
+    const done = (state) => {
+      if (!Session.user || Session.user.id !== uid || SiteOwner.uid !== uid) return;
+      SiteOwner.busy = false; SiteOwner.state = state;
+      siteOwnerChanged();
+    };
+    Cloud.fs.doc(`owners/${uid}`).get().then((snap) => done(snap.exists ? 'yes' : 'no'),
+      (e) => done(String((e && e.code) || '').includes('permission-denied') ? 'old' : ''));
+  }
+  const siteOwner = () => Session.kind === 'cloud' && !!Session.user && SiteOwner.uid === Session.user.id
+    && (SiteOwner.state === 'yes' || SiteOwner.state === 'old');
+  // When the Firestore rules refuse something: the fix for the site's owners, whom to email for everyone else.
+  const rulesFix = () => (siteOwner() ? 'If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.'
+    : `Email ${SUPPORT_EMAIL} so TapRoll can fix it.`);
+  const rulesFixBtn = () => (siteOwner() ? '<button class="btn sm" data-act="setup-guide">Setup guide</button>' : '');
+  const ownerLinksInner = () => 'Run this TapRoll site? <button type="button" class="linkbtn" data-act="setup-guide">Setup guide and Firestore rules</button>'
+    + ' · <button type="button" class="linkbtn" data-act="mail-guide">Automatic parent emails</button> · <a class="linkbtn" href="usage.html">Usage</a>';
+  function siteOwnerChanged() {
+    const el = $('#owner-links');
+    if (el) { el.innerHTML = siteOwner() ? ownerLinksInner() : ''; el.hidden = !siteOwner(); }
+    const sec = $('#school-sec');
+    if (sec) sec.innerHTML = schoolSectionInner();
+    mailChanged();
+  }
   function mailChanged() {
     const sec = $('#mail-sec');
     if (sec) sec.innerHTML = mailSectionInner();
@@ -6966,14 +7004,15 @@ code.nw { white-space: nowrap; }
       case 'loading':
         return `<p class="m-text small">Checking automatic emails…</p>${via}`;
       case 'blocked':
-        top = status('warn', 'alert', 'TapRoll couldn’t check automatic emails. If you run this TapRoll site, paste the latest Firestore rules from the setup guide into Firebase.', `<div class="row"><button type="button" class="btn sm" data-act="setup-guide">Setup guide</button>${again}</div>`);
+        top = status('warn', 'alert', `TapRoll couldn’t check automatic emails. ${esc(rulesFix())}`, `<div class="row">${siteOwner() ? '<button type="button" class="btn sm" data-act="setup-guide">Setup guide</button>' : ''}${again}</div>`);
         return top + manual + via;
       case 'unknown':
         return `${manual}<p class="m-text small">TapRoll couldn’t check whether automatic emails are on. Check your connection.</p><div class="row">${again}</div>${via}`;
       case 'none':
         return `${manual}<p class="m-text small">TapRoll can also email parents automatically after class, from the site’s own address. It isn’t set up on this TapRoll site yet.</p>`
-          + '<p class="m-text small">If you run this site and already set it up, the sender hasn’t reported in. It runs every 10 minutes once its Cron Trigger is added. If this still shows 15 minutes later, open the Worker in Cloudflare and look at its Logs for the error.</p>'
-          + guide + via;
+          + (siteOwner() ? '<p class="m-text small">If you run this site and already set it up, the sender hasn’t reported in. It runs every 10 minutes once its Cron Trigger is added. If this still shows 15 minutes later, open the Worker in Cloudflare and look at its Logs for the error.</p>'
+            + guide : '')
+          + via;
       case 'school':
         return `${manual}<p class="m-text small">Automatic emails after class are for teachers in a school. When your school invites you, join it under School above.</p>${via}`;
       case 'approve': {
@@ -6993,7 +7032,7 @@ code.nw { white-space: nowrap; }
     const sched = `<p class="m-text small">Automatic emails go out ${esc(scheduleText(sch))}, within ${hrs} hour${hrs === 1 ? '' : 's'} after each class ends, for classes that end after you turn them on. A class needs an end time. Other times, use Email parents.</p>`;
     if (info.why === 'off' && info.offer) top = `<p class="m-text small">TapRoll can email parents for you. ${when}, it emails the parents of students you marked absent or tardy${from}.${reply} To turn it on, choose Automatically after class.</p>${sched}`;
     else if (info.why === 'off') top = `<p class="m-text small">You send parent emails yourself. TapRoll writes each one and opens it in your email.</p>`;
-    else if (info.why === 'stalled') top = status('warn', 'alert', `Automatic emails stopped running ${esc(sinceText(info.last))}. Until they’re back, send parent emails yourself with Email parents. If you run this site, check the Worker’s Cron Trigger and Logs in Cloudflare.`, `<div class="row">${again}</div>`);
+    else if (info.why === 'stalled') top = status('warn', 'alert', `Automatic emails stopped running ${esc(sinceText(info.last))}. Until they’re back, send parent emails yourself with Email parents.${siteOwner() ? ' If you run this site, check the Worker’s Cron Trigger and Logs in Cloudflare.' : ''}`, `<div class="row">${again}</div>`);
     else {
       top = `<p class="m-text small">${when}, TapRoll emails the parents of students you marked absent or tardy${from}.${reply} Excused tardies aren’t emailed.</p>${sched}`;
       if (info.why === 'trouble') top += status('warn', 'alert', `The last try hit a problem${info.error ? `: ${esc(info.error)}` : ''}. TapRoll tries again every few minutes. You can also send emails yourself.`);
@@ -7287,6 +7326,7 @@ code.nw { white-space: nowrap; }
     schoolStartCloud(user);
     Store.openFirestore(Cloud.fs, user.uid);
     loadMail(true);
+    checkSiteOwner();
     // First sign-in: create the teacher's profile document.
     Store.onNewProfile = () => {
       const name = pending.name || user.displayName || '';
